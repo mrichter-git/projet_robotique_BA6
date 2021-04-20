@@ -8,8 +8,9 @@
 #ifndef TOF_H_
 #define TOF_H_
 
+//initialisation du capteur time of flight et lancement du thread
+void init_ToF(void);
 
-
-
-
+//renvoie la dernière distance mesurée par le ToF en [mm]
+uint16_t get_distance_mm();
 #endif /* TOF_H_ */

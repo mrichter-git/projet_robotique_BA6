@@ -12,8 +12,7 @@
 #include <camera/po8030.h>
 #include <chprintf.h>
 
-
-#include "motor_control.h"#include "motor_control.h"
+#include "motor_control.h"
 
 
 void SendUint8ToComputer(uint8_t* data, uint16_t size) 

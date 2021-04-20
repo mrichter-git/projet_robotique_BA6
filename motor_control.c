@@ -1,5 +1,4 @@
 #include "motor_control.h"
-
 #include "ch.h"
 #include "hal.h"
 #include <math.h>
@@ -48,7 +47,7 @@ static THD_FUNCTION(PiRegulator, arg) {
     }
 }
 
-void pi_regulator_start(void){
+void regulator_start(void){
 	chThdCreateStatic(waPiRegulator, sizeof(waPiRegulator), NORMALPRIO, PiRegulator, NULL);
 }
 
