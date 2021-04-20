@@ -131,16 +131,4 @@ uint16_t BlackLine_pixel_width(uint8_t* image, uint16_t size) {
 	return line_pixel_width;
 }
 
-int16_t get_line_begin(void) {
-
-	return line_begin;
-}
-
-
-int16_t get_center_line_begin(void) {
-
-	return center_line_begin;
-
-}
-
 

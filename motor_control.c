@@ -1,3 +1,5 @@
+#include "motor_control.h"
+
 #include "ch.h"
 #include "hal.h"
 #include <math.h>
@@ -7,7 +9,6 @@
 
 #include <main.h>
 #include <motors.h>
-#include <pi_regulator.h>
 #include <process_image.h>
 
 
