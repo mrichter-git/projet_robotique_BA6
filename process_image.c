@@ -75,15 +75,16 @@ static THD_FUNCTION(ProcessImage, arg) {
 		chBSemWait(&image_ready_sem);
 		img_buff_ptr = dcmi_get_last_image_ptr();
 
-		for(uint16_t i = 0; i < IMAGE_BUFFER_SIZE; ++i)
-		{
-			uint8_t pixel_collect_1 = 0;
-
-			pixel_collect_1 = (*(img_buff_ptr+2*i) & 0b00000111) << 3;
-			pixel_collect_1 |= (*(img_buff_ptr + 2*i+1) & (0b00000111<<5)) >> 5;
-
-			image[i] = pixel_collect_1;
-		}
+		//select only the one channel
+				for(uint16_t i=0; i<(2*IMAGE_BUFFER_SIZE); i+=2)
+				{
+					//red
+					//image[i/2]=((uint8_t)img_buff_ptr[i] & (0b11111000))>>3;
+					//green
+					image[i/2]=(((uint8_t)img_buff_ptr[i] & (0b00000111))<<3) | (((uint8_t)img_buff_ptr[i+1] & (0b11100000))>>5);
+					//blue
+					//image[i/2]= ((uint8_t)img_buff_ptr[i+1] & (0b00011111));
+				}
 
 		SendUint8ToComputer(image, IMAGE_BUFFER_SIZE);
 		int16_t pixel_width = BlackLine_pixel_width(image, IMAGE_BUFFER_SIZE);
