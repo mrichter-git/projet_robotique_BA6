@@ -10,6 +10,10 @@
 #include <motors.h>
 #include <process_image.h>
 
+static bool motor_stop = false;
+
+
+
 
 int16_t pi_regulator(float distance, float command);
 int16_t pi_regulator_angle(int16_t line_begin);
@@ -68,18 +72,5 @@ int16_t pi_regulator(float distance, float command) {
 
 }
 
-int16_t pi_regulator_angle(int16_t line_begin) {
 
-	int16_t goal = get_center_line_begin();
-	int16_t speed = 0;
-	float Kp = -1;
-	float Ki = -0.1;
 
-	speed = Kp*(goal-line_begin) + Ki*error_sum_angle;
-
-	error_sum_angle += goal-line_begin;
-	if(error_sum_angle > 5)	error_sum_angle = 5;
-	if(error_sum_angle < -5)	error_sum_angle = -5;
-
-	return speed;
-}
