@@ -2,18 +2,23 @@
  * ToF.c
  *
  *  Created on: 20 avr. 2021
- *      Author: franc
+ *      Author: Michael
  */
 #include "ToF.h"
 #include "VL53L0X.h"
+#include "process_image.h"
 
-#define TARGET_DIST_MM			50
+#define COLOR_TARGET_DIST_MM	50 			//distance ou l'on mesure la couleur du mur du fond
+#define TURN_TARGET_DIST_MM		20			//distance ou on commence le virage
+#define DIST_CAPTURE_STATE		0			//mode de capture de distance: vérifier dans quel mode on se trouve
+#define COLOR_CAPTURE_STATE		1			//mode de capture de couleur: appel des fonctions de capture d'image
+#define TURN_STATE				2			//mode de virage: on appelle les fonctions de virage
 
 static uint16_t dist_mm = 0;
 static bool ToF_configured = false;
 static thread_t *distThd;
+static uint8_t state = DIST_CAPT_ST;
 
-static BSEMAPHORE_DECL(target_hit_sem, FALSE);
 
 //Thread de mesure de la distance: différence avec celui de la librairie: mode de mesure et détéction de distance
 static THD_WORKING_AREA(waToFThd, 512);
@@ -39,16 +44,35 @@ static THD_FUNCTION(ToFThd, arg) {
 		ToF_configured = true;
 	}
 
+	uint8_t couleur = 0;
+
     /* Loop de lecture du thread*/
     while (chThdShouldTerminateX() == false) {
     	if(ToF_configured){
+    		//on copie la valeur mesurée dans une variable facile d'accès
     		VL53L0X_getLastMeasure(&device);
    			dist_mm = device.Data.LastRangeMeasure.RangeMilliMeter;
-   			if (Tof_target_dist){
-   				chBSemSignal(&target_hit_sem);
+
+   			//détection d'état du système
+   			switch (state){
+   				case DIST_CAPTURE_STATE: 	//état de détection de distance
+   					if (ToF_color_target_hit()){	//si la distance voulue est atteinte, on change de mode
+   						state = COLOR_CAPTURE_STATE;
+   					}
+   					else if (ToF_turn_target_hit()){
+   						state = TURN_STATE;
+   					}
+   					break;
+   				case COLOR_CAPTURE_STATE:
+   					couleur = get_couleur();
+   					state = DIST_CAPTURE_STATE;		//de cette manière, on peut bouger les murs et quand même continuer le fnctionnement
+   					break;
+   				case TURN_STATE:
+   					//à définir: process_COULEUR(couleur);
+   					break;
    			}
     	}
-		chThdSleepMilliseconds(100);
+		chThdSleepMilliseconds(50);
     }
 }
 
@@ -74,16 +98,39 @@ void ToF_stop(void) {
     ToF_configured = false;
 }
 
-bool ToF_target_dist(void) {
+uint16_t get_distance_mm(void) {
 
-	if (dist_mm < TARGET_DIST_MM)
+	return distance_mm;
+}
+
+//--------------------------------------------------------------------------------------------------------------
+//*Déclaration des fonctions internes
+//--------------------------------------------------------------------------------------------------------------
+
+/*
+ * @brief 	Détecte si la distance mesurée est plus petite qu'une valeur target pour la mesure de la couleur
+ *
+ * @return 	bool: plus petit ou plus grand
+ */
+bool ToF_color_target_hit(void) {
+
+	if (dist_mm <= COLOR_TARGET_DIST_MM)
 	{
 		return true;
 	}
 	return false;
 }
 
-uint16_t get_distance_mm(void) {
+/*
+ * @brief 	Détecte si la distance mesurée est plus petite qu'une valeur target pour tourner
+ *
+ * @return 	bool: plus petit ou plus grand
+ */
+bool ToF_turn_target_hit(void) {
 
-	return distance_mm;
+	if (dist_mm <= TURN_TARGET_DIST_MM)
+	{
+		return true;
+	}
+	return false;
 }

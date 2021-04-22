@@ -23,7 +23,7 @@ void ToF_stop(void);
  *
  * @return 	bool: plus petit ou plus grand
  */
-bool ToF_target_dist(void);
+bool ToF_target_hit(void);
 
 /*
  * @brief 	Renvoie la dernière distance mesurée par le ToF en [mm]
