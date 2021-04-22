@@ -1,7 +1,7 @@
 #ifndef PROCESS_IMAGE_H
 #define PROCESS_IMAGE_H
 
-/* renvoie la couleur du mur du fond lue par la camera
+/* capture une image et renvoie la couleur dominante vue par la camera.
  *  0 = aucunce couleur dominante
  *  1 = rouge
  *  2 = vert
@@ -9,8 +9,6 @@
  */
 uint8_t get_couleur(void);
 
-//initialisation des threads de la camera
-void process_image_start(void);
 
 
 #endif /* PROCESS_IMAGE_H */
