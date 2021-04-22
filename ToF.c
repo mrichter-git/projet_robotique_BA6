@@ -7,7 +7,7 @@
 #include "ToF.h"
 #include "VL53L0X.h"
 
-static uint16_t distance_mm = 0;
+static uint16_t dist_mm = 0;
 
 void init_ToF(void) {
 
@@ -15,5 +15,5 @@ void init_ToF(void) {
 
 uint16_t get_distance_mm(void) {
 
-	return distance_mm;
+	return dist_mm;
 }
