@@ -10,9 +10,6 @@
 
 #define COLOR_TARGET_DIST_MM	50 			//distance ou l'on mesure la couleur du mur du fond
 #define TURN_TARGET_DIST_MM		20			//distance ou on commence le virage
-#define DIST_CAPTURE_STATE		0			//mode de capture de distance: vérifier dans quel mode on se trouve
-#define COLOR_CAPTURE_STATE		1			//mode de capture de couleur: appel des fonctions de capture d'image
-#define TURN_STATE				2			//mode de virage: on appelle les fonctions de virage
 
 static uint16_t dist_mm = 0;
 static bool ToF_configured = false;
@@ -54,23 +51,12 @@ static THD_FUNCTION(ToFThd, arg) {
    			dist_mm = device.Data.LastRangeMeasure.RangeMilliMeter;
 
    			//détection d'état du système
-   			switch (state){
-   				case DIST_CAPTURE_STATE: 	//état de détection de distance
-   					if (ToF_color_target_hit()){	//si la distance voulue est atteinte, on change de mode
-   						state = COLOR_CAPTURE_STATE;
-   					}
-   					else if (ToF_turn_target_hit()){
-   						state = TURN_STATE;
-   					}
-   					break;
-   				case COLOR_CAPTURE_STATE:
-   					couleur = get_couleur();
-   					state = DIST_CAPTURE_STATE;		//de cette manière, on peut bouger les murs et quand même continuer le fnctionnement
-   					break;
-   				case TURN_STATE:
-   					//à définir: process_COULEUR(couleur);
-   					break;
-   			}
+   			if (ToF_color_target_hit()){	//si la distance voulue est atteinte, on change de mode
+   	   			state = COLOR_CAPTURE_STATE;
+   	   		}
+   	   		else if (ToF_turn_target_hit()){
+   	   			state = TURN_STATE;
+   	   		}
     	}
 		chThdSleepMilliseconds(50);
     }
@@ -99,8 +85,11 @@ void ToF_stop(void) {
 }
 
 uint16_t get_distance_mm(void) {
-
 	return distance_mm;
+}
+
+uint8_t get_state(void){
+	return state;
 }
 
 //--------------------------------------------------------------------------------------------------------------
