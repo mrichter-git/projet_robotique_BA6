@@ -8,15 +8,23 @@
 
 #include <process_image.h>
 
-#define NBR_AVERAGE 1
+//intensités maximales possibles pour chaque canal RGB
+#define MAX_VALUE_RED	 31
+#define MAX_VALUE_GREEN	 63
+#define MAX_VALUE_BLUE	 31
 
-static float distance_cm = 0;
-static int16_t line_begin = 320;
-static int16_t center_line_begin = 320;
 
-//internal function
+//déclaration des fonctions et variables globales internes
 
-uint16_t BlackLine_pixel_width(uint8_t* image, uint16_t size);
+static uint8_t couleur = 0; 		//memorise la dernière couleure vue par la camera (pas de couleur = 0, red = 1, green = 2
+									//blue = 3
+
+/* fonction:  detecte la couleur vue par la camera
+ * arguments: intensité des 3 canaux RGB.
+ * return:    aucun
+ */
+void detection_couleur(uint8_t red, uint8_t green, uint8_t blue);
+
 
 //semaphore
 static BSEMAPHORE_DECL(image_ready_sem, TRUE);
@@ -43,6 +51,7 @@ static THD_FUNCTION(CaptureImage, arg) {
     }
 }
 
+//---------------------------------------------------------------------------------------------------------
 
 static THD_WORKING_AREA(waProcessImage, 1024);
 static THD_FUNCTION(ProcessImage, arg) {
@@ -58,38 +67,37 @@ static THD_FUNCTION(ProcessImage, arg) {
     while(1){
 
     	//waits until an image has been captured
-       // chBSemWait(&image_ready_sem);
+         chBSemWait(&image_ready_sem);
+
 		//gets the pointer to the array filled with the last image in RGB565    
-		//img_buff_ptr = dcmi_get_last_image_ptr();
-
-		/*
-		*	To complete
-		*/
-
-
-		/*systime_t time2 = time;
-		time = chVTGetSystemTime();
-		chprintf((BaseSequentialStream *)&SD3, "time = %d \n", time-time2);
-		*/
-
-		chBSemWait(&image_ready_sem);
 		img_buff_ptr = dcmi_get_last_image_ptr();
 
-		//select only the one channel
-				for(uint16_t i=0; i<(2*IMAGE_BUFFER_SIZE); i+=2)
-				{
-					//red
-					//image[i/2]=((uint8_t)img_buff_ptr[i] & (0b11111000))>>3;
-					//green
-					image[i/2]=(((uint8_t)img_buff_ptr[i] & (0b00000111))<<3) | (((uint8_t)img_buff_ptr[i+1] & (0b11100000))>>5);
-					//blue
-					//image[i/2]= ((uint8_t)img_buff_ptr[i+1] & (0b00011111));
-				}
+		//variables contenant somme de chaque ligne de l'image pour les différents canaux de couleur RGB
+		//pour en faire la moyenne après
+		uint16_t somme_red = 0;
+		uint16_t somme_green = 0;
+		uint16_t somme_blue = 0;
 
-		SendUint8ToComputer(image, IMAGE_BUFFER_SIZE);
-		int16_t pixel_width = BlackLine_pixel_width(image, IMAGE_BUFFER_SIZE);
+		//calcul de la moyenne de chaque canal RGB pour extraire la couleur moyenne vue par la camera
+		for(uint16_t i=0; i<(IMAGE_BUFFER_SIZE); i++) {
 
-		distance_cm =  1355.1/pixel_width;
+			//somme du canal Red
+			somme_red += ((uint8_t)(*(img_buff_ptr+2*i) & (0b11111000))>>3);
+
+			//somme du canal Green
+			somme_green +=((*(img_buff_ptr+2*i) & (0b00000111))<<3) | ((*(img_buff_ptr+2*i+1) & (0b11100000))>>5);
+
+			//somme canal Blue
+			somme_blue += (*(img_buff_ptr+2*i+1) & (0b00011111));
+		}
+
+		//calcul des moyennes de chaque canal
+		uint8_t moyenne_red = somme_red/IMAGE_BUFFER_SIZE;
+		uint8_t moyenne_green = somme_green/IMAGE_BUFFER_SIZE;
+		uint8_t moyenne_blue = sommme_blue/IMAGE_BUFFER_SIZE;
+
+		//SendUint8ToComputer(image, IMAGE_BUFFER_SIZE);
+
 		//chprintf((BaseSequentialStream *)&SD3, "time = %d \n",(int) distance_cm);
 
     }
@@ -97,39 +105,28 @@ static THD_FUNCTION(ProcessImage, arg) {
 
 
 
-float get_distance_cm(void){
-	return distance_cm;
-}
-
+//--------------------------------------------------------------------------------------------------
 void process_image_start(void){
 	chThdCreateStatic(waProcessImage, sizeof(waProcessImage), NORMALPRIO, ProcessImage, NULL);
 	chThdCreateStatic(waCaptureImage, sizeof(waCaptureImage), NORMALPRIO, CaptureImage, NULL);
 }
+//---------------------------------------------------------------------------------------------------
+/* Une couleur est considérée comme dominante si la valeur de son canal correspondant est >= 0.5 valeur
+ * max du canal. Si l'intensité de plus d'un canal est >= 0.5 valeur mac du canal, la couleur détéectée
+ * est mise à 0 (aucune couleur n'est détectée)
+ *
+ */
+void detection_couleur(uint8_t red, uint8_t green, uint8_t blue) {
 
-uint16_t BlackLine_pixel_width(uint8_t* image, uint16_t size) {
-	bool line_begun = false;
-	uint16_t line_pixel_width = 0;
+	couleur = 0;
 
-	/*float moyenne = 0;
+	bool red_dominant = (red >= MAX_VALUE_RED/2);
+	bool green_dominant = (green>= MAX_VALUE_GREEN/2);
+	bool blue_dominant = (blue >= MAX_VALUE_BLUE/2);
 
-	for(uint16_t i = 0; i < size; ++i)
-	{
-		moyenne += image[i]/size;
+	if(red_dominant & !green_dominant & !blue_dominant)		couleur = 1;
+	if(!red_dominant & green_dominant & !blue_dominant)		couleur = 2;
+	if(!red_dominant & !green_dominant & blue_dominant)		couleur = 3;
 
-	}*/
-
-	for(uint16_t i = 0; i < size; ++i)
-	{
-		if(image[i] < 5) ++line_pixel_width;
-		if(image[i-1] < 5 && image[i] < 5 && image[i+1] < 5 && i>0 && i<size && !line_begun)
-		{
-			line_begin = i;
-			line_begun = true;
-		}
-	}
-	center_line_begin = size/2 - line_pixel_width/2;
-
-	return line_pixel_width;
 }
-
 
