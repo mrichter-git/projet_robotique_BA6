@@ -7,7 +7,7 @@
  *  2 = vert
  *  3 = bleu
  */
-uint8_t get_colour(void);
+uint8_t get_couleur(void);
 
 //initialisation des threads de la camera
 void process_image_start(void);

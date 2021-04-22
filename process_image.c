@@ -130,3 +130,8 @@ void detection_couleur(uint8_t red, uint8_t green, uint8_t blue) {
 
 }
 
+//-------------------------------------------------------------------------------------------------------
+
+uint8_t get_couleur(void) {
+	return couleur;
+}
