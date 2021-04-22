@@ -12,5 +12,7 @@
 void init_ToF(void);
 
 //renvoie la dernière distance mesurée par le ToF en [mm]
-uint16_t get_distance_mm();
+uint16_t get_distance_mm(void);
+
+
 #endif /* TOF_H_ */
