@@ -14,7 +14,6 @@ static bool motor_stop = false;
 
 
 
-
 int16_t pi_regulator(float distance, float command);
 int16_t pi_regulator_angle(int16_t line_begin);
 
