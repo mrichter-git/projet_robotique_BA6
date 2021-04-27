@@ -4,22 +4,33 @@
 #include <math.h>
 #include <usbcfg.h>
 #include <chprintf.h>
-
-
 #include <main.h>
 #include <motors.h>
 #include <process_image.h>
 #include <Tof.h>
 
+#define	NUMBER_STEP_FULL_ROTATION	1000		//nombre de pas des moteurs pour une rotation complète
+#define PI							3.1416
+#define PERIMETRE_ROUE				130			//perimetre de la roue en mm
+#define	DIAMETRE_EPUCK				54			//distance entre les deux roues du e-puck en mm
+
 static bool motor_stop = false;
+uint8_t last_color = 0; 			//dernière couleur vue par la camera (selon le #define de process_image.h)
 
 
 
 int16_t pi_regulator(float distance, float command);
-int16_t pi_regulator_angle(int16_t line_begin);
 
-static int16_t error_sum = 0;
-static int16_t error_sum_angle = 0;
+
+/* fonction:  tourne de 90° dans la direction indiquée par la couleur.
+ * 			  NO_COLOR = e-puck tourne pas mais continue d'avancer
+ * 			  ROUGE	   = e-puck tourne à gauche
+ * 			  VERT	   = e-puck tourne à droite
+ * 			  BLEU	   = e-puck s'arrête
+ * arguments: aucun.
+ * return:    aucun
+ */
+void turn_90_degree(void);
 
 static THD_WORKING_AREA(waMotorController, 256);
 static THD_FUNCTION(PiMotorController, arg) {
@@ -69,6 +80,27 @@ int16_t pi_regulator(float distance, float command) {
 	if(error_sum < -1000) error_sum = -1000;
 
 	return speed;
+
+}
+
+
+void turn_90_degree(void) {
+
+	uint8_t nbr_step_a_faire = 0;
+	//virage à gauche
+	if(last_color == ROUGE) {
+		nbr_step_a_faire = PI*PERIMETRE_ROUE*DIAMETRE_EPUCK/(4*NUMBER_STEP_FULL_ROTATION);
+	}
+
+	//virage à droite
+	if(last_color == VERT)	{
+		nbr_step_a_faire = -PI*PERIMETRE_ROUE*DIAMETRE_EPUCK/(4*NUMBER_STEP_FULL_ROTATION);
+	}
+
+	//arrêter les moteurs
+	if(last_color == BLEU) {
+		bool_motor_stop = true;
+	}
 
 }
 

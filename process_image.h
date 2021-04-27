@@ -12,7 +12,7 @@ uint8_t get_couleur(void);
 #define NO_COLOR	0
 #define ROUGE		1
 #define VERT		2
-#define	Bleu		3
+#define	BLEU		3
 
 
 #endif /* PROCESS_IMAGE_H */
