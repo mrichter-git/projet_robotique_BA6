@@ -2,8 +2,10 @@
  * ToF.c
  *
  *  Created on: 20 avr. 2021
- *      Author: Michael
+ *      Authors: Michael et Francesco
+ *      Code modifié sur la base de: VL530X.c et VL530X.h, author: Eliot Ferragni
  */
+
 #include "ToF.h"
 #include "VL53L0X.h"
 #include "process_image.h"
@@ -11,13 +13,34 @@
 #define COLOR_TARGET_DIST_MM	50 			//distance ou l'on mesure la couleur du mur du fond
 #define TURN_TARGET_DIST_MM		20			//distance ou on commence le virage
 
+//--------------------------------------------------------------------------------------------------------------
+//*Déclaration des variables globales internes et déclaration des fonctions privées
+//--------------------------------------------------------------------------------------------------------------
+
 static uint16_t dist_mm = 0;
 static bool ToF_configured = false;
 static thread_t *distThd;
 static uint8_t state = DIST_CAPT_ST;
 
+/*
+ * @brief 	Détecte si la distance mesurée est plus petite qu'une valeur target pour la mesure de la couleur
+ *
+ * @return 	bool
+ */
+bool ToF_color_target_hit(void);
 
-//Thread de mesure de la distance: différence avec celui de la librairie: mode de mesure et détéction de distance
+/*
+ * @brief 	Détecte si la distance mesurée est plus petite qu'une valeur target pour tourner
+ *
+ * @return 	bool
+ */
+bool ToF_turn_target_hit(void);
+
+
+//--------------------------------------------------------------------------------------------------------------
+//*Implémentation du thread ToF
+//--------------------------------------------------------------------------------------------------------------
+
 static THD_WORKING_AREA(waToFThd, 512);
 static THD_FUNCTION(ToFThd, arg) {
 
@@ -62,6 +85,11 @@ static THD_FUNCTION(ToFThd, arg) {
     }
 }
 
+
+//--------------------------------------------------------------------------------------------------------------
+//*Implémentation des fonctions publiques
+//--------------------------------------------------------------------------------------------------------------
+
 void ToF_start(void) {
 
 	if(VL53L0X_configured) {
@@ -93,14 +121,9 @@ uint8_t get_state(void){
 }
 
 //--------------------------------------------------------------------------------------------------------------
-//*Déclaration des fonctions internes
+//*Implémentation des Fonctions privées
 //--------------------------------------------------------------------------------------------------------------
 
-/*
- * @brief 	Détecte si la distance mesurée est plus petite qu'une valeur target pour la mesure de la couleur
- *
- * @return 	bool: plus petit ou plus grand
- */
 bool ToF_color_target_hit(void) {
 
 	if (dist_mm <= COLOR_TARGET_DIST_MM)
@@ -110,11 +133,6 @@ bool ToF_color_target_hit(void) {
 	return false;
 }
 
-/*
- * @brief 	Détecte si la distance mesurée est plus petite qu'une valeur target pour tourner
- *
- * @return 	bool: plus petit ou plus grand
- */
 bool ToF_turn_target_hit(void) {
 
 	if (dist_mm <= TURN_TARGET_DIST_MM)
