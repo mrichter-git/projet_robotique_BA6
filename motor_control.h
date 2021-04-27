@@ -2,6 +2,6 @@
 #define MOTOR_CONTROL_H
 
 //start the  regulator thread
-void regulator_start(void);
+void motor_controller_start(void);
 
 #endif /* MOTOR_CONTROL_H */
