@@ -15,6 +15,8 @@
 #include "motor_control.h"
 
 
+static uint8_t state = DIST_CAPTURE_STATE;
+
 void SendUint8ToComputer(uint8_t* data, uint16_t size) 
 {
 	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)"START", 5);
@@ -69,3 +71,12 @@ void __stack_chk_fail(void)
 {
     chSysHalt("Stack smashing detected");
 }
+
+uint8_t get_state(void){
+	return state;
+}
+
+void set_state(uint8_t sys_state){
+	state = sys_state;
+}
+
