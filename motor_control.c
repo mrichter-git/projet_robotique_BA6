@@ -13,13 +13,18 @@
 #define PI							3.1416
 #define PERIMETRE_ROUE				130			//perimetre de la roue en mm
 #define	DIAMETRE_EPUCK				54			//distance entre les deux roues du e-puck en mm
+#define SPEED_SATURATION_MOTOR		MOTOR_SPEED_LIMIT	//réduit la vitesse maximale des moteurs
 
 static bool motor_stop = false;
 uint8_t last_color = NO_COLOR; 			//dernière couleur vue par la camera (selon le #define de process_image.h)
 uint8_t state = DIST_CAPTURE_STATE;
 
-
-int16_t pi_regulator(float distance, float command);
+/*	fonction: calcul de la vitesse des moteurs souhaitée à travers un régulateur P
+ * 	argument: @distance :distance du epuck par rapport au mur du fond
+ * 			  @command  :distance souhaitée entre le epuck et le mur du fond
+ * 	return:	  vitesse des moteurs souhaitée
+ */
+int16_t regulator(uint16_t distance, uint16_t command);
 
 
 /* fonction:  tourne de 90° dans la direction indiquée par la couleur.
@@ -33,7 +38,7 @@ int16_t pi_regulator(float distance, float command);
 void turn_90_degree(void);
 
 static THD_WORKING_AREA(waMotorController, 256);
-static THD_FUNCTION(PiMotorController, arg) {
+static THD_FUNCTION(MotorController, arg) {
 
     chRegSetThreadName("Motor Thd");
     (void)arg;
@@ -42,24 +47,31 @@ static THD_FUNCTION(PiMotorController, arg) {
 
     systime_t time;
 
+    int16_t speed = 0;
 
     while(1){
+
         time = chVTGetSystemTime();
         state = get_state();
 
         switch (state){
         case COLOR_CAPTURE_STATE:
         	last_color = get_couleur();
-        	set_state(DIST_CAPTURE_STATE);
+        	//set_state(DIST_CAPTURE_STATE);
         	break;
         case TURN_STATE:
-        	//mettre fonctions nécessaires
+        	//turn_90_degree();
         	set_state(DIST_CAPTURE_STATE);
         	break;
         }
 
-		 right_motor_set_speed(speed-speed_turn);
-		 left_motor_set_speed(speed+speed_turn);
+        //vitesse des moteurs
+        if(motor_stop)	{speed = 0;}
+        else {speed = regulator(get_distance_mm(), TURN_TARGET_DIST_MM);}
+
+
+	    right_motor_set_speed(speed);
+	    left_motor_set_speed(speed);
 
         //100Hz
         chThdSleepUntilWindowed(time, time + MS2ST(10)); //Prendre en compte le temps d'exec du controlleur
@@ -78,18 +90,18 @@ void motor_controller_start(void){
 //*Déclaration des fonctions internes
 //--------------------------------------------------------------------------------------------------------------
 
-int16_t pi_regulator(float distance, float command) {
+int16_t regulator(uint16_t distance, uint16_t command) {
 
 	int16_t speed = 0;
-	int16_t Kp = -150;
-	float Ki = -1.75;
+	int16_t Kp = 50;
+	//float Ki = -1.75;
+   speed = Kp*(command-distance); //+ Ki*error_sum;
 
-	speed = Kp*(command-distance) + Ki*error_sum;
-
-	//implementing an antireset windup
+	/*//implementing an antireset windup
 	error_sum += command-distance;
-	if(error_sum > 1000) error_sum = 1000;
-	if(error_sum < -1000) error_sum = -1000;
+*/
+	if(speed > SPEED_SATURATION_MOTOR)   speed = SPEED_SATURATION_MOTOR;
+    if(speed < -SPEED_SATURATION_MOTOR)  speed = -SPEED_SATURATION_MOTOR;
 
 	return speed;
 
@@ -116,7 +128,6 @@ void turn_90_degree(void) {
 
 	left_motor_set_pos(left_motor_get_pos()-nbr_step_a_faire);
 	right_motor_set_pos(right_motor_get_pos()+nbr_step_a_faire);
-
 }
 
 

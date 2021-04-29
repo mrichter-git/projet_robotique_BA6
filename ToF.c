@@ -5,13 +5,14 @@
  *      Authors: Michael et Francesco
  *      Code modifié sur la base de: VL530X.c et VL530X.h, author: Eliot Ferragni
  */
-
+#include "ch.h"
+#include "hal.h"
 #include "ToF.h"
-#include "VL53L0X.h"
+#include "sensors/VL53L0X/VL53L0X.h"
+#include "main.h"
 #include "process_image.h"
 
-#define COLOR_TARGET_DIST_MM	50 			//distance ou l'on mesure la couleur du mur du fond
-#define TURN_TARGET_DIST_MM		20			//distance ou on commence le virage
+
 
 //--------------------------------------------------------------------------------------------------------------
 //*Déclaration des variables globales internes et déclaration des fonctions privées
@@ -63,8 +64,6 @@ static THD_FUNCTION(ToFThd, arg) {
 		ToF_configured = true;
 	}
 
-	uint8_t couleur = 0;
-
     /* Loop de lecture du thread*/
     while (chThdShouldTerminateX() == false) {
     	if(ToF_configured && (get_state()==DIST_CAPTURE_STATE)){
@@ -74,10 +73,10 @@ static THD_FUNCTION(ToFThd, arg) {
 
    			//détection d'état du système
    			if (ToF_color_target_hit()){	//si la distance voulue est atteinte, on change de mode
-   	   			state = set_state(COLOR_CAPTURE_STATE);
+   				set_state(COLOR_CAPTURE_STATE);
    	   		}
    	   		else if (ToF_turn_target_hit()){
-   	   			state = set_state(TURN_STATE);
+   	   			set_state(TURN_STATE);
    	   		}
     	}
 		chThdSleepMilliseconds(100);
@@ -91,7 +90,7 @@ static THD_FUNCTION(ToFThd, arg) {
 
 void ToF_start(void) {
 
-	if(VL53L0X_configured) {
+	if(ToF_configured) {
 		return;
 	}
 
@@ -112,7 +111,7 @@ void ToF_stop(void) {
 }
 
 uint16_t get_distance_mm(void) {
-	return distance_mm;
+	return dist_mm;
 }
 
 //--------------------------------------------------------------------------------------------------------------

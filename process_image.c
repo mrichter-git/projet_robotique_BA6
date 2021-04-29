@@ -84,7 +84,7 @@ void lecture_image(uint8_t* moyennes_couleur){
 	//calcul des moyennes de chaque canal
 	*(moyennes_couleur) = somme_red/IMAGE_BUFFER_SIZE;
 	*(moyennes_couleur + 1) = somme_green/IMAGE_BUFFER_SIZE;
-	*(moyennes_couleur + 2)= sommme_blue/IMAGE_BUFFER_SIZE;
+	*(moyennes_couleur + 2)= somme_blue/IMAGE_BUFFER_SIZE;
 
 }
 
@@ -116,7 +116,7 @@ uint8_t get_couleur(void) {
 
 	capture_image();
 	lecture_image(moyennes_image);
-	detection_couleur(moyenne_image[0], moyenne_image[1], moyenne_image[2]);
+	detection_couleur(moyennes_image[0], moyennes_image[1], moyennes_image[2]);
 
 	return couleur;
 }
