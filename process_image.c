@@ -75,10 +75,10 @@ void lecture_image(uint8_t* moyennes_couleur){
 		somme_red += ((uint8_t)(*(img_buff_ptr+2*i) & (0b11111000))>>3);
 
 		//somme du canal Green
-		somme_green +=((*(img_buff_ptr+2*i) & (0b00000111))<<3) | ((*(img_buff_ptr+2*i+1) & (0b11100000))>>5);
+		somme_green += (uint8_t)(((*(img_buff_ptr+2*i) & (0b00000111))<<3) | ((*(img_buff_ptr+2*i+1) & (0b11100000))>>5));
 
 		//somme canal Blue
-		somme_blue += (*(img_buff_ptr+2*i+1) & (0b00011111));
+		somme_blue += (uint8_t)(*(img_buff_ptr+2*i+1) & (0b00011111));
 	}
 
 	//calcul des moyennes de chaque canal
