@@ -1,23 +1,27 @@
-#include "motor_control.h"
 #include "ch.h"
 #include "hal.h"
 #include <math.h>
 #include <usbcfg.h>
 #include <chprintf.h>
-#include <main.h>
-#include <motors.h>
-#include <process_image.h>
-#include <Tof.h>
+
+
+#include "motor_control.h"
+#include "main.h"
+#include "motors.h"
+#include "process_image.h"
+#include "Tof.h"
 
 #define	NUMBER_STEP_FULL_ROTATION	1000		//nombre de pas des moteurs pour une rotation complète
 #define PI							3.1416
 #define PERIMETRE_ROUE				130			//perimetre de la roue en mm
 #define	DIAMETRE_EPUCK				54			//distance entre les deux roues du e-puck en mm
 #define SPEED_SATURATION_MOTOR		MOTOR_SPEED_LIMIT	//réduit la vitesse maximale des moteurs
+#define ERROR_SUM_MAX				500
 
 static bool motor_stop = false;
 uint8_t last_color = NO_COLOR; 			//dernière couleur vue par la camera (selon le #define de process_image.h)
 uint8_t state = DIST_CAPTURE_STATE;
+static int16_t error_sum = 0;
 
 /*	fonction: calcul de la vitesse des moteurs souhaitée à travers un régulateur P
  * 	argument: @distance :distance du epuck par rapport au mur du fond
@@ -57,13 +61,14 @@ static THD_FUNCTION(MotorController, arg) {
         switch (state){
         case COLOR_CAPTURE_STATE:
         	last_color = get_couleur();
-        	//set_state(DIST_CAPTURE_STATE);
+        	set_state(DIST_CAPTURE_STATE);
         	break;
         case TURN_STATE:
-        	//turn_90_degree();
+        	turn_90_degree();
         	set_state(DIST_CAPTURE_STATE);
         	break;
         }
+        //chprintf((BaseSequentialStream *)&SD3, "couleur = %d \n ", last_color);
 
         //vitesse des moteurs
         if(motor_stop)	{speed = 0;}
@@ -73,8 +78,8 @@ static THD_FUNCTION(MotorController, arg) {
 	    right_motor_set_speed(speed);
 	    left_motor_set_speed(speed);
 
-        //100Hz
-        chThdSleepUntilWindowed(time, time + MS2ST(10)); //Prendre en compte le temps d'exec du controlleur
+        //10Hz
+        chThdSleepUntilWindowed(time, time + MS2ST(100)); //Prendre en compte le temps d'exec du controlleur
     }
 }
 
@@ -93,13 +98,17 @@ void motor_controller_start(void){
 int16_t regulator(uint16_t distance, uint16_t command) {
 
 	int16_t speed = 0;
-	int16_t Kp = 50;
-	//float Ki = -1.75;
-   speed = Kp*(command-distance); //+ Ki*error_sum;
+	int16_t Kp = 20;
+	float Ki = -0.1;
+	error_sum += command - distance;
+	speed = Kp*(command-distance) + Ki*error_sum;
 
-	/*//implementing an antireset windup
+	//implementing an antireset windup
 	error_sum += command-distance;
-*/
+
+	if (error_sum > ERROR_SUM_MAX ) error_sum = ERROR_SUM_MAX;
+	else if (error_sum < -ERROR_SUM_MAX) error_sum = -ERROR_SUM_MAX;
+
 	if(speed > SPEED_SATURATION_MOTOR)   speed = SPEED_SATURATION_MOTOR;
     if(speed < -SPEED_SATURATION_MOTOR)  speed = -SPEED_SATURATION_MOTOR;
 

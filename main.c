@@ -7,12 +7,13 @@
 #include "hal.h"
 #include "memory_protection.h"
 #include <usbcfg.h>
-#include <main.h>
 #include <motors.h>
 #include <camera/po8030.h>
 #include <chprintf.h>
 
+#include "main.h"
 #include "motor_control.h"
+#include "ToF.h"
 
 
 static uint8_t state = DIST_CAPTURE_STATE;
@@ -44,9 +45,9 @@ int main(void)
     mpu_init();
 
     //starts the serial communication
-    //serial_start();
+    serial_start();
     //start the USB communication
-    //usb_start();
+    usb_start();
 
     //starts the camera
     dcmi_start();

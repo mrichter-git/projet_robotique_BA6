@@ -3,10 +3,10 @@
 #include <chprintf.h>
 #include <usbcfg.h>
 
-#include <main.h>
-#include <camera/po8030.h>
 
-#include <process_image.h>
+#include <camera/po8030.h>
+#include "main.h"
+#include "process_image.h"
 
 //intensités maximales possibles pour chaque canal RGB
 #define MAX_VALUE_RED	 31
@@ -74,6 +74,7 @@ void lecture_image(uint8_t* moyennes_couleur){
 		//somme du canal Red
 		somme_red += ((uint8_t)(*(img_buff_ptr+2*i) & (0b11111000))>>3);
 
+
 		//somme du canal Green
 		somme_green += (uint8_t)(((*(img_buff_ptr+2*i) & (0b00000111))<<3) | ((*(img_buff_ptr+2*i+1) & (0b11100000))>>5));
 
@@ -83,8 +84,11 @@ void lecture_image(uint8_t* moyennes_couleur){
 
 	//calcul des moyennes de chaque canal
 	*(moyennes_couleur) = somme_red/IMAGE_BUFFER_SIZE;
+	chprintf((BaseSequentialStream *)&SD3, "red = %d \n ", *(moyennes_couleur));
 	*(moyennes_couleur + 1) = somme_green/IMAGE_BUFFER_SIZE;
+	chprintf((BaseSequentialStream *)&SD3, "green = %d \n ", *(moyennes_couleur+1));
 	*(moyennes_couleur + 2)= somme_blue/IMAGE_BUFFER_SIZE;
+	chprintf((BaseSequentialStream *)&SD3, "blue = %d \n ", *(moyennes_couleur+2));
 
 }
 

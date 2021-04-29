@@ -3,7 +3,7 @@
 #Simply adapt the lines below to be able to compile
 
 # Define project name here
-PROJECT = Mini_Projet_Robo
+PROJECT = projet_robotique_BA6
 
 #Define path to the e-puck2_main-processor folder
 GLOBAL_PATH = ../../lib/e-puck2_main-processor

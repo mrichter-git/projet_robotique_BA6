@@ -7,8 +7,12 @@
  */
 #include "ch.h"
 #include "hal.h"
+#include <chprintf.h>
+#include <sensors/VL53L0X/VL53L0X.h>
+#include <i2c_bus.h>
+
+
 #include "ToF.h"
-#include "sensors/VL53L0X/VL53L0X.h"
 #include "main.h"
 #include "process_image.h"
 
@@ -66,7 +70,7 @@ static THD_FUNCTION(ToFThd, arg) {
 
     /* Loop de lecture du thread*/
     while (chThdShouldTerminateX() == false) {
-    	if(ToF_configured && (get_state()==DIST_CAPTURE_STATE)){
+    	if(ToF_configured && get_state()==DIST_CAPTURE_STATE){
     		//on copie la valeur mesurée dans une variable facile d'accès
     		VL53L0X_getLastMeasure(&device);
    			dist_mm = device.Data.LastRangeMeasure.RangeMilliMeter;
@@ -79,6 +83,8 @@ static THD_FUNCTION(ToFThd, arg) {
    	   			set_state(TURN_STATE);
    	   		}
     	}
+    	//chprintf((BaseSequentialStream *)&SD3, "state = %d \n ", get_state());
+    	//chprintf((BaseSequentialStream *)&SD3, "dist = %d \n ", dist_mm);
 		chThdSleepMilliseconds(100);
     }
 }
@@ -98,7 +104,7 @@ void ToF_start(void) {
 
 	distThd = chThdCreateStatic(waToFThd, //initialisation du thread: nom:distThd
                      sizeof(waToFThd),
-                     NORMALPRIO + 10,
+                     NORMALPRIO,
                      ToFThd,
                      NULL);
 }
@@ -120,7 +126,7 @@ uint16_t get_distance_mm(void) {
 
 bool ToF_color_target_hit(void) {
 
-	if (dist_mm <= COLOR_TARGET_DIST_MM)
+	if (dist_mm <= COLOR_TARGET_DIST_MM && dist_mm > TURN_TARGET_DIST_MM)
 	{
 		return true;
 	}
