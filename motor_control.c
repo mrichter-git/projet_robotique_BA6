@@ -99,8 +99,11 @@ void turn_90_degree(void) {
 
 	//arrêter les moteurs
 	if(last_color == BLEU) {
-		bool_motor_stop = true;
+		motor_stop = true;
 	}
+
+	left_motor_set_position(left_motor_get_pos()-nbr_step_a_faire);
+	right_motor_set_position(right_motor_get_pos()+nbr_step_a_faire);
 
 }
 
