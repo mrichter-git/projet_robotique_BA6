@@ -44,18 +44,21 @@ int main(void)
     mpu_init();
 
     //starts the serial communication
-    serial_start();
+    //serial_start();
     //start the USB communication
-    usb_start();
+    //usb_start();
+
     //starts the camera
     dcmi_start();
 	po8030_start();
 	//inits the motors
 	motors_init();
+	//Time of flight sensor inits in thread
 
-	//stars the threads for the pi regulator and the processing of the image
-	pi_regulator_start();
-	process_image_start();
+
+	//stars the threads for the ToF sensor and the control of the motors
+	ToF_start();
+	motor_controller_start();
 
     /* Infinite loop. */
     while (1) {

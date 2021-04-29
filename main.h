@@ -10,7 +10,7 @@ extern "C" {
 #include "parameter/parameter.h"
 
 
-//constants for the differents parts of the project
+//Constantes utilisées dans le projet
 #define IMAGE_BUFFER_SIZE		640
 
 #define DIST_CAPTURE_STATE		0			//mode de capture de distance: vérifier dans quel mode on se trouve
