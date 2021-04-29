@@ -15,8 +15,8 @@
 #define	DIAMETRE_EPUCK				54			//distance entre les deux roues du e-puck en mm
 
 static bool motor_stop = false;
-uint8_t last_color = 0; 			//dernière couleur vue par la camera (selon le #define de process_image.h)
-
+uint8_t last_color = NO_COLOR; 			//dernière couleur vue par la camera (selon le #define de process_image.h)
+uint8_t state = DIST_CAPTURE_STATE;
 
 
 int16_t pi_regulator(float distance, float command);
@@ -98,7 +98,7 @@ int16_t pi_regulator(float distance, float command) {
 
 void turn_90_degree(void) {
 
-	uint8_t nbr_step_a_faire = 0;
+	int32_t nbr_step_a_faire = 0;
 	//virage à gauche
 	if(last_color == ROUGE) {
 		nbr_step_a_faire = PI*PERIMETRE_ROUE*DIAMETRE_EPUCK/(4*NUMBER_STEP_FULL_ROTATION);
@@ -114,8 +114,8 @@ void turn_90_degree(void) {
 		motor_stop = true;
 	}
 
-	left_motor_set_position(left_motor_get_pos()-nbr_step_a_faire);
-	right_motor_set_position(right_motor_get_pos()+nbr_step_a_faire);
+	left_motor_set_pos(left_motor_get_pos()-nbr_step_a_faire);
+	right_motor_set_pos(right_motor_get_pos()+nbr_step_a_faire);
 
 }
 
