@@ -112,11 +112,11 @@ void detection_couleur(uint8_t red, uint8_t green, uint8_t blue) {
 
 uint8_t get_couleur(void) {
 	//contiendra la moyenne de chaque canal RGB dans l'ordre Red, Green, Blue
-	uint8_t moyennes_image[3] = {0}
+	uint8_t moyennes_image[3] = {0};
 
 	capture_image();
 	lecture_image(moyennes_image);
-	detection_couleur(moyenne_image[0], moyenne_image[1], moyenne_image[2])
+	detection_couleur(moyenne_image[0], moyenne_image[1], moyenne_image[2]);
 
 	return couleur;
 }

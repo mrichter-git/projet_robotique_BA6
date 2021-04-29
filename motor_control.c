@@ -42,9 +42,21 @@ static THD_FUNCTION(PiMotorController, arg) {
 
     systime_t time;
 
+
     while(1){
         time = chVTGetSystemTime();
+        state = get_state();
 
+        switch (state){
+        case COLOR_CAPTURE_STATE:
+        	last_color = get_couleur();
+        	set_state(DIST_CAPTURE_STATE);
+        	break;
+        case TURN_STATE:
+        	//mettre fonctions nécessaires
+        	set_state(DIST_CAPTURE_STATE);
+        	break;
+        }
 
 		 right_motor_set_speed(speed-speed_turn);
 		 left_motor_set_speed(speed+speed_turn);
