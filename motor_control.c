@@ -98,19 +98,17 @@ void motor_controller_start(void){
 int16_t regulator(uint16_t distance, uint16_t command) {
 
 	int16_t speed = 0;
-	int16_t Kp = 20;
-	float Ki = -0.1;
-	error_sum += command - distance;
-	speed = Kp*(command-distance) + Ki*error_sum;
+	int16_t Kp = 800;
+	//float Ki = 0.29;
+	//error_sum += distance-command;
+	speed = Kp*(distance-command); //+ Ki*error_sum;
 
-	//implementing an antireset windup
-	error_sum += command-distance;
-
-	if (error_sum > ERROR_SUM_MAX ) error_sum = ERROR_SUM_MAX;
-	else if (error_sum < -ERROR_SUM_MAX) error_sum = -ERROR_SUM_MAX;
+	//implementing an antireset windud
+	//if (error_sum > ERROR_SUM_MAX ) error_sum = ERROR_SUM_MAX;
+	//else if (error_sum < -ERROR_SUM_MAX) error_sum = -ERROR_SUM_MAX;
 
 	if(speed > SPEED_SATURATION_MOTOR)   speed = SPEED_SATURATION_MOTOR;
-    if(speed < -SPEED_SATURATION_MOTOR)  speed = -SPEED_SATURATION_MOTOR;
+    if(speed < 0)  speed = 0;
 
 	return speed;
 

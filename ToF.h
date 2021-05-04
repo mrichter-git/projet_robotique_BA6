@@ -14,7 +14,7 @@
 /**
  * @brief 	Débute le thread du Tof pour faire des mesures en continu
  */
-void start_ToF(void);
+void ToF_start(void);
 
 /**
  * @brief 	Arrête les mesures du capteur et bloque son thread
