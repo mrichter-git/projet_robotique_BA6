@@ -70,7 +70,7 @@ static THD_FUNCTION(MotorController, arg) {
         time = chVTGetSystemTime();
         state = get_state();
 
-        switch (state){
+       /* switch (state){
         case COLOR_CAPTURE_STATE:
         	last_color = get_couleur();
         	chprintf((BaseSequentialStream *)&SD3, "couleur = %d \n ", last_color);
@@ -88,7 +88,7 @@ static THD_FUNCTION(MotorController, arg) {
         else if ((get_distance_mm()<(TURN_TARGET_DIST_MM+ERROR_MARGIN_DIST_MM))
                 		&& (get_distance_mm()>(TURN_TARGET_DIST_MM-ERROR_MARGIN_DIST_MM))) speed=0;
         else speed = regulator(get_distance_mm(), TURN_TARGET_DIST_MM);
-
+*/
         speed=0;
         right_motor_set_speed(speed);
         left_motor_set_speed(speed);
@@ -155,21 +155,42 @@ void turn_90_degree(void) {
 
 
 void motor_do_N_step(uint16_t step, int16_t speed, uint8_t moteur){
+	left_motor_set_speed(0);
+	right_motor_set_speed(0);
 
-	if(moteur == LEFT_MOTOR){
-		left_motor_set_pos(0);
-		while(left_motor_get_pos()<=step) {
-			left_motor_set_speed(speed);
+	if(speed > 0) {
+		if(moteur == LEFT_MOTOR) {
+			left_motor_set_pos(0);
+			while(left_motor_get_pos() <= step){
+				left_motor_set_speed(speed);
+			}
+			left_motor_set_speed(0);
 		}
-		left_motor_set_speed(0); //arrête le moteur après avoir fait N step
+
+		if(moteur == RIGHT_MOTOR) {
+			right_motor_set_pos(0);
+			while(right_motor_get_pos() <= step) {
+				right_motor_set_speed(speed);
+			}
+			right_motor_set_speed(0);
+		}
 	}
 
-	if(moteur == RIGHT_MOTOR){
-		right_motor_set_pos(0);
-		while(right_motor_get_pos()<=step) {
-			right_motor_set_speed(speed);
+	if(speed <0) {
+		if(moteur == LEFT_MOTOR) {
+			left_motor_set_pos(step);
+			while(left_motor_get_pos() >= 0) {
+				left_motor_set_speed(speed);
+			}
+			left_motor_set_speed(0);
 		}
-		right_motor_set_speed(0);
+		if(moteur == RIGHT_MOTOR) {
+			right_motor_set_pos(step);
+			while(right_motor_get_pos() >= 0){
+				right_motor_set_speed(speed);
+			}
+			right_motor_set_speed(0);
+		}
 	}
 }
 
