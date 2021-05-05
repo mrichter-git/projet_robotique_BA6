@@ -22,7 +22,7 @@ static uint8_t couleur = 0; 		//memorise la dernière couleure vue par la camera 
  * arguments: intensité des 3 canaux RGB.
  * return:    aucun
  */
-void detection_couleur(uint8_t red, uint8_t green, uint8_t blue);
+void detection_couleur(uint16_t red, uint16_t green, uint16_t blue);
 
 /* fonction:  lancer une capture d'image
  * arguments: aucun
@@ -34,7 +34,7 @@ void capture_image(void);
  * arguments: l'adresse du premier element du tableau de taille 3 qui contiendra la moyenne de chaque canal
  * return:    aucun
  */
-void lecture_image(uint8_t* moyennes_couleur);
+void lecture_image(uint16_t* moyennes_couleur);
 
 
 //-----------------------------------implémentations des fonctions---------------------------------------------------------
@@ -55,7 +55,7 @@ void capture_image(void) {
 
 //---------------------------------------------------------------------------------------------------------
 
-void lecture_image(uint8_t* moyennes_couleur){
+void lecture_image(uint16_t* moyennes_couleur){
 
 	uint8_t *img_buff_ptr;
 
@@ -74,7 +74,6 @@ void lecture_image(uint8_t* moyennes_couleur){
 		//somme du canal Red
 		somme_red += ((uint8_t)(*(img_buff_ptr+2*i) & (0b11111000))>>3);
 
-
 		//somme du canal Green
 		somme_green += (uint8_t)(((*(img_buff_ptr+2*i) & (0b00000111))<<3) | ((*(img_buff_ptr+2*i+1) & (0b11100000))>>5));
 
@@ -82,13 +81,13 @@ void lecture_image(uint8_t* moyennes_couleur){
 		somme_blue += (uint8_t)(*(img_buff_ptr+2*i+1) & (0b00011111));
 	}
 
-	//calcul des moyennes de chaque canal
-	*(moyennes_couleur) = somme_red/IMAGE_BUFFER_SIZE;
-	chprintf((BaseSequentialStream *)&SD3, "red = %d \n ", *(moyennes_couleur));
-	*(moyennes_couleur + 1) = somme_green/IMAGE_BUFFER_SIZE;
-	chprintf((BaseSequentialStream *)&SD3, "green = %d \n ", *(moyennes_couleur+1));
-	*(moyennes_couleur + 2)= somme_blue/IMAGE_BUFFER_SIZE;
-	chprintf((BaseSequentialStream *)&SD3, "blue = %d \n ", *(moyennes_couleur+2));
+	//calcul des moyennes normalisée de chaque canal
+	*(moyennes_couleur) = somme_red/MAX_VALUE_RED;// /(IMAGE_BUFFER_SIZE);
+	//chprintf((BaseSequentialStream *)&SD3, "red = %d \n ", *(moyennes_couleur));
+	*(moyennes_couleur + 1) = somme_green/MAX_VALUE_GREEN;// /(IMAGE_BUFFER_SIZE);
+	//chprintf((BaseSequentialStream *)&SD3, "green = %d \n ", *(moyennes_couleur+1));
+	*(moyennes_couleur + 2)= somme_blue/MAX_VALUE_BLUE;// /(IMAGE_BUFFER_SIZE);
+	//chprintf((BaseSequentialStream *)&SD3, "blue = %d \n ", *(moyennes_couleur+2));
 
 }
 
@@ -98,13 +97,21 @@ void lecture_image(uint8_t* moyennes_couleur){
  * est mise à 0 (aucune couleur n'est détectée)
  *
  */
-void detection_couleur(uint8_t red, uint8_t green, uint8_t blue) {
+void detection_couleur(uint16_t red, uint16_t green, uint16_t blue) {
 
 	couleur = 0;
+	uint16_t threshold = 0;
+	threshold = (red+green+blue)/(3);
+	chprintf((BaseSequentialStream *)&SD3, "\n");
+	chprintf((BaseSequentialStream *)&SD3, "thresh = %d \n ", threshold);
 
-	bool red_dominant = (red >= MAX_VALUE_RED/2);
-	bool green_dominant = (green>= MAX_VALUE_GREEN/2);
-	bool blue_dominant = (blue >= MAX_VALUE_BLUE/2);
+
+	bool red_dominant = (red >= threshold);
+	chprintf((BaseSequentialStream *)&SD3, "red = %d \n ", red);
+	bool green_dominant = (green >= threshold);
+	chprintf((BaseSequentialStream *)&SD3, "green = %d \n ", green);
+	bool blue_dominant = (blue >= threshold);
+	chprintf((BaseSequentialStream *)&SD3, "blue = %d \n ", blue);
 
 	if(red_dominant & !green_dominant & !blue_dominant)		couleur = 1;
 	if(!red_dominant & green_dominant & !blue_dominant)		couleur = 2;
@@ -116,7 +123,7 @@ void detection_couleur(uint8_t red, uint8_t green, uint8_t blue) {
 
 uint8_t get_couleur(void) {
 	//contiendra la moyenne de chaque canal RGB dans l'ordre Red, Green, Blue
-	uint8_t moyennes_image[3] = {0};
+	uint16_t moyennes_image[3] = {0};
 
 	capture_image();
 	lecture_image(moyennes_image);

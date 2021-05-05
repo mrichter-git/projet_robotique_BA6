@@ -17,6 +17,7 @@
 #define	DIAMETRE_EPUCK				54			//distance entre les deux roues du e-puck en mm
 #define SPEED_SATURATION_MOTOR		MOTOR_SPEED_LIMIT	//réduit la vitesse maximale des moteurs
 #define ERROR_SUM_MAX				500
+#define ERROR_MARGIN_DIST_MM		5				//mm
 
 static bool motor_stop = false;
 uint8_t last_color = NO_COLOR; 			//dernière couleur vue par la camera (selon le #define de process_image.h)
@@ -61,32 +62,38 @@ static THD_FUNCTION(MotorController, arg) {
         switch (state){
         case COLOR_CAPTURE_STATE:
         	last_color = get_couleur();
+        	chprintf((BaseSequentialStream *)&SD3, "couleur = %d \n ", last_color);
         	set_state(DIST_CAPTURE_STATE);
         	break;
         case TURN_STATE:
-        	turn_90_degree();
+        	//turn_90_degree();
         	set_state(DIST_CAPTURE_STATE);
         	break;
         }
-        //chprintf((BaseSequentialStream *)&SD3, "couleur = %d \n ", last_color);
 
         //vitesse des moteurs
-        if(motor_stop)	{speed = 0;}
-        else {speed = regulator(get_distance_mm(), TURN_TARGET_DIST_MM);}
+        if(motor_stop)	speed = 0;
+        //marge d'erreur acceptable
+        else if ((get_distance_mm()<(TURN_TARGET_DIST_MM+ERROR_MARGIN_DIST_MM))
+                		&& (get_distance_mm()>(TURN_TARGET_DIST_MM-ERROR_MARGIN_DIST_MM))) speed=0;
+        else speed = regulator(get_distance_mm(), TURN_TARGET_DIST_MM);
 
 
-	    right_motor_set_speed(speed);
-	    left_motor_set_speed(speed);
 
-        //10Hz
-        chThdSleepUntilWindowed(time, time + MS2ST(100)); //Prendre en compte le temps d'exec du controlleur
+        speed=0;
+        right_motor_set_speed(speed);
+        left_motor_set_speed(speed);
+        turn_90_degree();
+
+        //100Hz
+        chThdSleepUntilWindowed(time, time + MS2ST(10)); //Prendre en compte le temps d'exec du controlleur
     }
 }
 
 void motor_controller_start(void){
 	chThdCreateStatic(waMotorController,
 					sizeof(waMotorController),
-					NORMALPRIO,
+					NORMALPRIO+4,
 					MotorController, NULL);
 
 }
@@ -98,17 +105,17 @@ void motor_controller_start(void){
 int16_t regulator(uint16_t distance, uint16_t command) {
 
 	int16_t speed = 0;
-	int16_t Kp = 800;
-	//float Ki = 0.29;
-	//error_sum += distance-command;
-	speed = Kp*(distance-command); //+ Ki*error_sum;
+	int16_t Kp = 50;
+	float Ki = 0.29;
+	error_sum += distance-command;
+	speed = Kp*(distance-command) + Ki*error_sum;
 
-	//implementing an antireset windud
-	//if (error_sum > ERROR_SUM_MAX ) error_sum = ERROR_SUM_MAX;
-	//else if (error_sum < -ERROR_SUM_MAX) error_sum = -ERROR_SUM_MAX;
+	//implementing an antireset wind-up
+	if (error_sum > ERROR_SUM_MAX ) error_sum = ERROR_SUM_MAX;
+	else if (error_sum < -ERROR_SUM_MAX) error_sum = -ERROR_SUM_MAX;
 
 	if(speed > SPEED_SATURATION_MOTOR)   speed = SPEED_SATURATION_MOTOR;
-    if(speed < 0)  speed = 0;
+    if(speed < -SPEED_SATURATION_MOTOR)  speed = -SPEED_SATURATION_MOTOR;
 
 	return speed;
 
@@ -117,21 +124,24 @@ int16_t regulator(uint16_t distance, uint16_t command) {
 
 void turn_90_degree(void) {
 
+	last_color=ROUGE;
 	int32_t nbr_step_a_faire = 0;
 	//virage à gauche
 	if(last_color == ROUGE) {
-		nbr_step_a_faire = PI*PERIMETRE_ROUE*DIAMETRE_EPUCK/(4*NUMBER_STEP_FULL_ROTATION);
+		nbr_step_a_faire = PI*NUMBER_STEP_FULL_ROTATION*DIAMETRE_EPUCK/(4*PERIMETRE_ROUE);
 	}
 
 	//virage à droite
 	if(last_color == VERT)	{
-		nbr_step_a_faire = -PI*PERIMETRE_ROUE*DIAMETRE_EPUCK/(4*NUMBER_STEP_FULL_ROTATION);
+		nbr_step_a_faire = -PI*NUMBER_STEP_FULL_ROTATION*DIAMETRE_EPUCK/(4*PERIMETRE_ROUE);
 	}
 
 	//arrêter les moteurs
 	if(last_color == BLEU) {
 		motor_stop = true;
 	}
+
+	//chprintf((BaseSequentialStream *)&SD3, "step = %d \n ", nbr_step_a_faire);
 
 	left_motor_set_pos(left_motor_get_pos()-nbr_step_a_faire);
 	right_motor_set_pos(right_motor_get_pos()+nbr_step_a_faire);
