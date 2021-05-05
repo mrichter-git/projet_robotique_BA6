@@ -18,11 +18,16 @@
 #define SPEED_SATURATION_MOTOR		MOTOR_SPEED_LIMIT	//réduit la vitesse maximale des moteurs
 #define ERROR_SUM_MAX				500
 #define ERROR_MARGIN_DIST_MM		5				//mm
+#define TURN_SPEED					400			//vitesse à laquelle on fait touner le e-puck(en pas/s)
+#define LEFT_MOTOR					0			//moteur de gauche
+#define	RIGHT_MOTOR					1			//moteur de droite
 
 static bool motor_stop = false;
 uint8_t last_color = NO_COLOR; 			//dernière couleur vue par la camera (selon le #define de process_image.h)
 uint8_t state = DIST_CAPTURE_STATE;
 static int16_t error_sum = 0;
+
+
 
 /*	fonction: calcul de la vitesse des moteurs souhaitée à travers un régulateur P
  * 	argument: @distance :distance du epuck par rapport au mur du fond
@@ -41,6 +46,12 @@ int16_t regulator(uint16_t distance, uint16_t command);
  * return:    aucun
  */
 void turn_90_degree(void);
+
+/* fonction:  fait bouger le @moteur (gauche ou droite) de @step pas à la vitesse @speed
+ * arguments: @step: nombre de pas à effectuer, @speed: vitesse souhaitée;
+ * return:	  aucun
+ */
+void motor_do_N_step(uint16_t step, int16_t speed, uint8_t moteur);
 
 static THD_WORKING_AREA(waMotorController, 256);
 static THD_FUNCTION(MotorController, arg) {
@@ -78,8 +89,6 @@ static THD_FUNCTION(MotorController, arg) {
                 		&& (get_distance_mm()>(TURN_TARGET_DIST_MM-ERROR_MARGIN_DIST_MM))) speed=0;
         else speed = regulator(get_distance_mm(), TURN_TARGET_DIST_MM);
 
-
-
         speed=0;
         right_motor_set_speed(speed);
         left_motor_set_speed(speed);
@@ -99,7 +108,7 @@ void motor_controller_start(void){
 }
 
 //--------------------------------------------------------------------------------------------------------------
-//*Déclaration des fonctions internes
+//*Implémentation des fonctions internes
 //--------------------------------------------------------------------------------------------------------------
 
 int16_t regulator(uint16_t distance, uint16_t command) {
@@ -125,26 +134,42 @@ int16_t regulator(uint16_t distance, uint16_t command) {
 void turn_90_degree(void) {
 
 	last_color=ROUGE;
-	int32_t nbr_step_a_faire = 0;
+	int32_t nbr_step_a_faire = nbr_step_a_faire = PI*NUMBER_STEP_FULL_ROTATION*DIAMETRE_EPUCK/(4*PERIMETRE_ROUE);
 	//virage à gauche
 	if(last_color == ROUGE) {
-		nbr_step_a_faire = PI*NUMBER_STEP_FULL_ROTATION*DIAMETRE_EPUCK/(4*PERIMETRE_ROUE);
+		motor_do_N_step(nbr_step_a_faire, TURN_SPEED, RIGHT_MOTOR);
+		motor_do_N_step(nbr_step_a_faire, -TURN_SPEED, LEFT_MOTOR);
 	}
 
 	//virage à droite
 	if(last_color == VERT)	{
-		nbr_step_a_faire = -PI*NUMBER_STEP_FULL_ROTATION*DIAMETRE_EPUCK/(4*PERIMETRE_ROUE);
+		motor_do_N_step(nbr_step_a_faire, TURN_SPEED, LEFT_MOTOR);
+		motor_do_N_step(nbr_step_a_faire, -TURN_SPEED, RIGHT_MOTOR);
 	}
 
 	//arrêter les moteurs
 	if(last_color == BLEU) {
 		motor_stop = true;
 	}
-
-	//chprintf((BaseSequentialStream *)&SD3, "step = %d \n ", nbr_step_a_faire);
-
-	left_motor_set_pos(left_motor_get_pos()-nbr_step_a_faire);
-	right_motor_set_pos(right_motor_get_pos()+nbr_step_a_faire);
 }
 
+
+void motor_do_N_step(uint16_t step, int16_t speed, uint8_t moteur){
+
+	if(moteur == LEFT_MOTOR){
+		left_motor_set_pos(0);
+		while(left_motor_get_pos()<=step) {
+			left_motor_set_speed(speed);
+		}
+		left_motor_set_speed(0); //arrête le moteur après avoir fait N step
+	}
+
+	if(moteur == RIGHT_MOTOR){
+		right_motor_set_pos(0);
+		while(right_motor_get_pos()<=step) {
+			right_motor_set_speed(speed);
+		}
+		right_motor_set_speed(0);
+	}
+}
 
