@@ -53,6 +53,7 @@ static THD_FUNCTION(MotorController, arg) {
     systime_t time;
 
     int16_t speed = 0;
+    uint8_t captured = 0;
 
     while(1){
 
@@ -61,12 +62,19 @@ static THD_FUNCTION(MotorController, arg) {
 
         switch (state){
         case COLOR_CAPTURE_STATE:
-        	last_color = get_couleur();
-        	chprintf((BaseSequentialStream *)&SD3, "couleur = %d \n ", last_color);
+        	capture_couleur();
         	set_state(DIST_CAPTURE_STATE);
+        	captured = 1;
         	break;
         case TURN_STATE:
         	//turn_90_degree();
+        	if (captured){
+        		last_color = get_couleur();
+        		chprintf((BaseSequentialStream *)&SD3, "couleur = %d \n ", last_color);
+        		reset_couleur();
+        		captured = 0;
+        	}
+
         	set_state(DIST_CAPTURE_STATE);
         	break;
         }

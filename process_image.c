@@ -3,7 +3,6 @@
 #include <chprintf.h>
 #include <usbcfg.h>
 
-
 #include <camera/po8030.h>
 #include "main.h"
 #include "process_image.h"
@@ -13,9 +12,12 @@
 #define MAX_VALUE_GREEN	 63
 #define MAX_VALUE_BLUE	 31
 
-//----------------------déclaration des fonctions et variables globales internes--------------------------------------------
 
-static uint8_t couleur = 0; 		//memorise la dernière couleure vue par la camera (pas de couleur = 0, red = 1, green = 2
+//--------------------------------------------------------------------------------------------------------------
+//*Déclaration des fonctions et variables globales internes
+//--------------------------------------------------------------------------------------------------------------
+
+static uint16_t couleur[4] = {0};	//memorise le nombre de fois que chaque couleur est dominante (rien=0, red = 1, green = 2
 									//blue = 3
 
 /* fonction:  detecte la couleur vue par la camera
@@ -36,8 +38,9 @@ void capture_image(void);
  */
 void lecture_image(uint16_t* moyennes_couleur);
 
-
-//-----------------------------------implémentations des fonctions---------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------------
+//*implémentations des fonctions
+//--------------------------------------------------------------------------------------------------------------
 
 void capture_image(void) {
 
@@ -53,7 +56,7 @@ void capture_image(void) {
 	wait_image_ready();
 }
 
-//---------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------------
 
 void lecture_image(uint16_t* moyennes_couleur){
 
@@ -81,55 +84,71 @@ void lecture_image(uint16_t* moyennes_couleur){
 		somme_blue += (uint8_t)(*(img_buff_ptr+2*i+1) & (0b00011111));
 	}
 
-	//calcul des moyennes normalisée de chaque canal
+	//calcul des moyennes normalisées en fonction de leur max de chaque canal
+
 	*(moyennes_couleur) = somme_red/MAX_VALUE_RED;// /(IMAGE_BUFFER_SIZE);
 	//chprintf((BaseSequentialStream *)&SD3, "red = %d \n ", *(moyennes_couleur));
+
 	*(moyennes_couleur + 1) = somme_green/MAX_VALUE_GREEN;// /(IMAGE_BUFFER_SIZE);
 	//chprintf((BaseSequentialStream *)&SD3, "green = %d \n ", *(moyennes_couleur+1));
+
 	*(moyennes_couleur + 2)= somme_blue/MAX_VALUE_BLUE;// /(IMAGE_BUFFER_SIZE);
 	//chprintf((BaseSequentialStream *)&SD3, "blue = %d \n ", *(moyennes_couleur+2));
 
+
 }
 
-//---------------------------------------------------------------------------------------------------
-/* Une couleur est considérée comme dominante si la valeur de son canal correspondant est >= 0.5 valeur
- * max du canal. Si l'intensité de plus d'un canal est >= 0.5 valeur mac du canal, la couleur détéectée
+//-------------------------------------------------------------------------------------------------------------
+/* Une couleur est considérée comme dominante si la valeur de son canal correspondant est plus grande que
+ * la valeur moyenne de l'intensité capturée. Si plus d'un canal est dominant, la couleur detectée
  * est mise à 0 (aucune couleur n'est détectée)
  *
  */
 void detection_couleur(uint16_t red, uint16_t green, uint16_t blue) {
 
-	couleur = 0;
 	uint16_t threshold = 0;
 	threshold = (red+green+blue)/(3);
-	chprintf((BaseSequentialStream *)&SD3, "\n");
-	chprintf((BaseSequentialStream *)&SD3, "thresh = %d \n ", threshold);
+	//chprintf((BaseSequentialStream *)&SD3, "\n");
+	//chprintf((BaseSequentialStream *)&SD3, "thresh = %d \n ", threshold);
 
 
 	bool red_dominant = (red >= threshold);
-	chprintf((BaseSequentialStream *)&SD3, "red = %d \n ", red);
+	//chprintf((BaseSequentialStream *)&SD3, "red = %d \n ", red);
 	bool green_dominant = (green >= threshold);
-	chprintf((BaseSequentialStream *)&SD3, "green = %d \n ", green);
+	//chprintf((BaseSequentialStream *)&SD3, "green = %d \n ", green);
 	bool blue_dominant = (blue >= threshold);
-	chprintf((BaseSequentialStream *)&SD3, "blue = %d \n ", blue);
+	//chprintf((BaseSequentialStream *)&SD3, "blue = %d \n ", blue);
 
-	if(red_dominant & !green_dominant & !blue_dominant)		couleur = 1;
-	if(!red_dominant & green_dominant & !blue_dominant)		couleur = 2;
-	if(!red_dominant & !green_dominant & blue_dominant)		couleur = 3;
-
+	if(red_dominant & !green_dominant & !blue_dominant)				couleur[1] += 1;
+	else if(!red_dominant & green_dominant & !blue_dominant)		couleur[2] += 1;
+	else if(!red_dominant & !green_dominant & blue_dominant)		couleur[3] += 1;
+	else 															couleur[0] += 1;
 }
 
 //-------------------------------------------------------------------------------------------------------
 
 uint8_t get_couleur(void) {
+	uint8_t dominant = 0;
+	if ((couleur [1] > couleur [2]) && (couleur[1] > couleur[3])) 		dominant = 1;
+	else if ((couleur [2] > couleur [1]) && (couleur[2] > couleur[3])) 	dominant = 2;
+	else if ((couleur [3] > couleur [1]) && (couleur[3] > couleur[2])) 	dominant = 3;
+	else																dominant = 0;
+	return dominant;
+}
+
+//---------------------------------------------------------------------------------------------------------
+
+void reset_couleur(void) {
+	for (uint8_t i = 0; i <= 3; i++) couleur[i] = 0;
+}
+
+//---------------------------------------------------------------------------------------------------------
+void capture_couleur(void) {
 	//contiendra la moyenne de chaque canal RGB dans l'ordre Red, Green, Blue
 	uint16_t moyennes_image[3] = {0};
 
 	capture_image();
 	lecture_image(moyennes_image);
 	detection_couleur(moyennes_image[0], moyennes_image[1], moyennes_image[2]);
-
-	return couleur;
 }
-
 
