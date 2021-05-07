@@ -8,7 +8,7 @@
 #ifndef TOF_H_
 #define TOF_H_
 
-#define COLOR_TARGET_DIST_MM	70			//distance ou l'on mesure la couleur du mur du fond
+#define COLOR_TARGET_DIST_MM	100			//distance ou l'on mesure la couleur du mur du fond
 #define TURN_TARGET_DIST_MM		40			//distance ou on commence le virage
 
 /**

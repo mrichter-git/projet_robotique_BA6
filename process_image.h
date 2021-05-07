@@ -19,6 +19,12 @@ void reset_couleur(void);
  */
 void capture_couleur(void);
 
+/* fonction:  init la camera selon les paramètres désirés
+ * arguments: aucun
+ * return:    aucun
+ */
+void camera_init(void);
+
 #define NO_COLOR	0
 #define ROUGE		1
 #define VERT		2

@@ -42,7 +42,7 @@ int16_t regulator(uint16_t distance, uint16_t command);
  */
 void turn_90_degree(void);
 
-static THD_WORKING_AREA(waMotorController, 256);
+static THD_WORKING_AREA(waMotorController, 1024);
 static THD_FUNCTION(MotorController, arg) {
 
     chRegSetThreadName("Motor Thd");
@@ -53,7 +53,7 @@ static THD_FUNCTION(MotorController, arg) {
     systime_t time;
 
     int16_t speed = 0;
-    uint8_t captured = 0;
+    bool captured = 0;
 
     while(1){
 
@@ -79,19 +79,19 @@ static THD_FUNCTION(MotorController, arg) {
         	break;
         }
 
-        //vitesse des moteurs
+        /*//vitesse des moteurs
         if(motor_stop)	speed = 0;
         //marge d'erreur acceptable
         else if ((get_distance_mm()<(TURN_TARGET_DIST_MM+ERROR_MARGIN_DIST_MM))
                 		&& (get_distance_mm()>(TURN_TARGET_DIST_MM-ERROR_MARGIN_DIST_MM))) speed=0;
         else speed = regulator(get_distance_mm(), TURN_TARGET_DIST_MM);
-
+		*/
 
 
         speed=0;
         right_motor_set_speed(speed);
         left_motor_set_speed(speed);
-        turn_90_degree();
+        //turn_90_degree();
 
         //100Hz
         chThdSleepUntilWindowed(time, time + MS2ST(10)); //Prendre en compte le temps d'exec du controlleur
@@ -101,7 +101,7 @@ static THD_FUNCTION(MotorController, arg) {
 void motor_controller_start(void){
 	chThdCreateStatic(waMotorController,
 					sizeof(waMotorController),
-					NORMALPRIO+4,
+					NORMALPRIO,
 					MotorController, NULL);
 
 }

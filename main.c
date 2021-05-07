@@ -52,6 +52,7 @@ int main(void)
     //starts the camera
     dcmi_start();
 	po8030_start();
+	camera_init();
 	//inits the motors
 	motors_init();
 	//Time of flight sensor inits in thread
