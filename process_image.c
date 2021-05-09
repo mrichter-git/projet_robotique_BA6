@@ -12,6 +12,9 @@
 #define MAX_VALUE_GREEN		63
 #define MAX_VALUE_BLUE	 	31
 #define SLOPE_WIDTH			30
+#define RED_GAIN			0x5E		//default 0x5E
+#define GREEN_GAIN			0x49		//default 0x40
+#define BLUE_GAIN			0x5D		//default 0x5D
 
 
 //--------------------------------------------------------------------------------------------------------------
@@ -67,26 +70,27 @@ void lecture_image(uint16_t* moyennes_couleur){
 	uint8_t image[IMAGE_BUFFER_SIZE] = {0};
 
 	//calcul des moyennes normalisées en fonction de leur max de chaque canal cette manière pour éviter dépass. de capa
-	//ROUGE
-	for(uint16_t i=0; i<(2*IMAGE_BUFFER_SIZE); i+=2){
-		image[i/2]=((uint8_t)img_buff_ptr[i] & (0b11111000))>>3;
-	}
-	*(moyennes_couleur) = somme_couleur_image(image)/MAX_VALUE_RED;
-	//chprintf((BaseSequentialStream *)&SD3, "red = %d \n ", *(moyennes_couleur));
+	//on fait l'opération pour chaque ligne, décalage de i de 2*IMAGE_BUFFER_SIZE
+	for(uint8_t j=0; j<3; j++){
+		//ROUGE
+		for(uint16_t i=0; i<(2*IMAGE_BUFFER_SIZE); i+=2){
+			image[i/2]=((uint8_t)img_buff_ptr[i+(j*2*IMAGE_BUFFER_SIZE)] & (0b11111000))>>3;
+		}
+		*(moyennes_couleur) += somme_couleur_image(image)/MAX_VALUE_RED;
 
-	//VERT
-	for(uint16_t i=0; i<(2*IMAGE_BUFFER_SIZE); i+=2){
-		image[i/2]=(((uint8_t)img_buff_ptr[i] & (0b00000111))<<3) | (((uint8_t)img_buff_ptr[i+1] & (0b11100000))>>5);
-	}
-	*(moyennes_couleur + 1) = somme_couleur_image(image)/MAX_VALUE_GREEN;
-	//chprintf((BaseSequentialStream *)&SD3, "green = %d \n ", *(moyennes_couleur+1));
+		//VERT
+		for(uint16_t i=0; i<(2*IMAGE_BUFFER_SIZE); i+=2){
+			image[i/2]=(((uint8_t)img_buff_ptr[i+(j*2*IMAGE_BUFFER_SIZE)] & (0b00000111))<<3) |
+					(((uint8_t)img_buff_ptr[i+(j*2*IMAGE_BUFFER_SIZE)+1] & (0b11100000))>>5);
+		}
+		*(moyennes_couleur + 1) += somme_couleur_image(image)/MAX_VALUE_GREEN;
 
-	//BLEU
-	for(uint16_t i=0; i<(2*IMAGE_BUFFER_SIZE); i+=2){
-		image[i/2]= ((uint8_t)img_buff_ptr[i+1] & (0b00011111));
+		//BLEU
+		for(uint16_t i=0; i<(2*IMAGE_BUFFER_SIZE); i+=2){
+			image[i/2]= ((uint8_t)img_buff_ptr[i+(j*2*IMAGE_BUFFER_SIZE)+1] & (0b00011111));
+		}
+		*(moyennes_couleur + 2) += somme_couleur_image(image)/MAX_VALUE_BLUE;
 	}
-	*(moyennes_couleur + 2)= somme_couleur_image(image)/MAX_VALUE_BLUE;
-	//chprintf((BaseSequentialStream *)&SD3, "blue = %d \n ", *(moyennes_couleur+2));
 
 
 }
@@ -170,8 +174,10 @@ void detection_couleur(uint16_t red, uint16_t green, uint16_t blue) {
 //--------------------------------------------------------------------------------------------------------------
 
 void camera_init(void){
-	po8030_advanced_config(FORMAT_RGB565, 0, 10, IMAGE_BUFFER_SIZE, 2, SUBSAMPLING_X1, SUBSAMPLING_X1);
-	po8030_set_awb(1);	//enables auto white balance
+	po8030_advanced_config(FORMAT_RGB565, 0, 10, IMAGE_BUFFER_SIZE, 6, SUBSAMPLING_X1, SUBSAMPLING_X1);
+	po8030_set_awb(0);	//disables auto white balance
+	po8030_set_ae(1);	//enables auto-exposure
+	po8030_set_rgb_gain(RED_GAIN, GREEN_GAIN, BLUE_GAIN);
 	dcmi_enable_double_buffering();
 	dcmi_set_capture_mode(CAPTURE_ONE_SHOT);
 	dcmi_prepare();

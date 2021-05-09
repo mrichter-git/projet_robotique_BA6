@@ -42,7 +42,7 @@ int16_t regulator(uint16_t distance, uint16_t command);
  */
 void turn_90_degree(void);
 
-static THD_WORKING_AREA(waMotorController, 1024);
+static THD_WORKING_AREA(waMotorController, 2048);
 static THD_FUNCTION(MotorController, arg) {
 
     chRegSetThreadName("Motor Thd");
