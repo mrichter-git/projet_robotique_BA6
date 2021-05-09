@@ -11,9 +11,14 @@
 #include <camera/po8030.h>
 #include <chprintf.h>
 
+
 #include "main.h"
 #include "motor_control.h"
 #include "ToF.h"
+
+messagebus_t bus;
+MUTEX_DECL(bus_lock);
+CONDVAR_DECL(bus_condvar);
 
 
 static uint8_t state = DIST_CAPTURE_STATE;
@@ -49,12 +54,17 @@ int main(void)
     //start the USB communication
     usb_start();
 
+    //initialise message bus
+    messagebus_init(&bus, &lock, &condvar);
+
     //starts the camera
     dcmi_start();
 	po8030_start();
+
 	//inits the motors
 	motors_init();
-	//Time of flight sensor inits in thread
+	//proximity sensor intialisation
+	proximity_start();
 
 
 	//stars the threads for the ToF sensor and the control of the motors

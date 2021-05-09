@@ -4,7 +4,7 @@
 #include <usbcfg.h>
 #include <chprintf.h>
 
-
+#include "sensors/proximity.h"
 #include "motor_control.h"
 #include "main.h"
 #include "motors.h"
@@ -17,15 +17,19 @@
 #define	DIAMETRE_EPUCK				54			//distance entre les deux roues du e-puck en mm
 #define SPEED_SATURATION_MOTOR		MOTOR_SPEED_LIMIT	//réduit la vitesse maximale des moteurs
 #define ERROR_SUM_MAX				500
+#define ERROR_SUM_PROX_MAX			200
 #define ERROR_MARGIN_DIST_MM		5				//mm
 #define TURN_SPEED					350			//vitesse à laquelle on fait touner le e-puck(en pas/s)
 #define NBR_STEP_90_DEGREE			PI*NUMBER_STEP_FULL_ROTATION*DIAMETRE_EPUCK/(4*PERIMETRE_ROUE)
+#define PROXIMITY_LEFT			5
+#define PROXIMITY_RIGHT			2
 
 
 static bool motor_stop = false;
-uint8_t last_color = NO_COLOR; 			//dernière couleur vue par la camera (selon le #define de process_image.h)
-uint8_t state = DIST_CAPTURE_STATE;
+static uint8_t last_color = NO_COLOR; 			//dernière couleur vue par la camera (selon le #define de process_image.h)
+static uint8_t state = DIST_CAPTURE_STATE;
 static int16_t error_sum = 0;
+static int16_t error_sum_proximity = 0;			//Terme intégrale du PI utilisant les capteurs de proximité
 
 
 
@@ -48,6 +52,13 @@ int16_t regulator(uint16_t distance, uint16_t command);
 void turn_90_degree(void);
 
 
+/* fonction: recentrage du robot au milieu de sa piste au moyen d'un regulateur PI
+ * arguments: aucun
+ * return: 	commande en vitesse pour les moteurs.
+ */
+int16_t proximity_regulator(void);
+
+
 
 static THD_WORKING_AREA(waMotorController, 512);
 static THD_FUNCTION(MotorController, arg) {
@@ -55,10 +66,14 @@ static THD_FUNCTION(MotorController, arg) {
     chRegSetThreadName("Motor_Thd");
     (void)arg;
 
+    //calibration of the proximity sensors
+    callibrate_ir();
+
 
     systime_t time;
 
     int16_t speed = 0;
+    int16_t turn_speed = 0; //composante de la vitesse dédiée au recentrage du robot
 
     while(1){
 
@@ -84,8 +99,11 @@ static THD_FUNCTION(MotorController, arg) {
                 		&& (get_distance_mm()>(TURN_TARGET_DIST_MM-ERROR_MARGIN_DIST_MM))) speed=0;
         else speed = regulator(get_distance_mm(), TURN_TARGET_DIST_MM);
 
-        left_motor_set_speed(speed);
-        right_motor_set_speed(speed);
+        if(motor_stop) turn_speed = 0;
+        else	       turn_speed = proximity_regulator();
+
+        left_motor_set_speed(speed-turn_speed);
+        right_motor_set_speed(speed+turn_speed);
 
         //100Hz
         chThdSleepUntilWindowed(time, time + MS2ST(10)); //Prendre en compte le temps d'exec du controlleur
@@ -163,5 +181,28 @@ void turn_90_degree(void) {
 	}
 }
 
+
+int16_t proximity_regulator(void) {
+
+	int16_t turn_speed;
+	//implementing a PI regulator
+
+	int16_t Kp = 50;
+	float 	Ki = 0.1;
+
+	//difference d'intensité entre les capteurs de droite et de gauche pour le centrage du robot en enlevant l'effet de la lunmière ambiante
+
+	int16_t prox_value_difference = (get_prox(PROXIMITY_LEFT)-get_ambient_light(PROXIMITY_LEFT)) - (get_prox(PROXIMITY_RIGHT)-get_ambient_light(PROXIMITY_RIGHT));
+
+	error_sum_proximity+= prox_value_difference;
+
+	//antireset windup implementation
+	if(error_sum_proximity > ERROR_SUM_PROX_MAX)	error_sum_proximity = ERROR_SUM_PROX_MAX;
+	if(error_sum_proximity < -ERROR_SUM_PROX_MAX)	error_sum_proximity = -ERROR_SUM_PROX_MAX;
+
+	turn_speed = Kp*prox_value_difference + Ki*error_sum_proximity;
+
+	return turn_speed;
+}
 
 

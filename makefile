@@ -13,7 +13,7 @@ CSRC += ./main.c \
 		./motor_control.c \
 		./process_image.c \
 		./ToF.c \
-		
+		./proximity_sensor.c \
 
 #Header folders to include
 INCDIR += 
