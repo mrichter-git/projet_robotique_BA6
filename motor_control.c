@@ -10,6 +10,7 @@
 #include "motors.h"
 #include "process_image.h"
 #include "Tof.h"
+#include "audio/play_sound_file.h"
 
 #define	NUMBER_STEP_FULL_ROTATION	1000		//nombre de pas des moteurs pour une rotation complète
 #define PI							3.1416
@@ -66,14 +67,25 @@ static THD_FUNCTION(MotorController, arg) {
     chRegSetThreadName("Motor_Thd");
     (void)arg;
 
+    //adresse du fichier audio pour animation sonore
+    char sound[9];
+    sound[0] = 'r';
+    sound[1] = '2';
+    sound[3] = 'd';
+    sound[4] = '2';
+    sound[5] = '.';
+    sound[6] = 'w';
+    sound[7] = 'a';
+    sound[8] = 'v';
+
     //calibration of the proximity sensors
-    callibrate_ir();
+    //calibrate_ir();
 
 
     systime_t time;
 
     int16_t speed = 0;
-    int16_t turn_speed = 0; //composante de la vitesse dédiée au recentrage du robot
+    //int16_t turn_speed = 0; //composante de la vitesse dédiée au recentrage du robot
 
     while(1){
 
@@ -89,6 +101,7 @@ static THD_FUNCTION(MotorController, arg) {
         case TURN_STATE:
         	turn_90_degree();
         	set_state(DIST_CAPTURE_STATE);
+        	playSoundFile(sound,SF_SIMPLE_PLAY);
         	break;
         }
 
@@ -99,11 +112,11 @@ static THD_FUNCTION(MotorController, arg) {
                 		&& (get_distance_mm()>(TURN_TARGET_DIST_MM-ERROR_MARGIN_DIST_MM))) speed=0;
         else speed = regulator(get_distance_mm(), TURN_TARGET_DIST_MM);
 
-        if(motor_stop) turn_speed = 0;
-        else	       turn_speed = proximity_regulator();
+        //if(motor_stop) turn_speed = 0;
+        //else	       turn_speed = proximity_regulator();
 
-        left_motor_set_speed(speed-turn_speed);
-        right_motor_set_speed(speed+turn_speed);
+        left_motor_set_speed(speed);//-turn_speed);
+        right_motor_set_speed(speed);//+turn_speed);
 
         //100Hz
         chThdSleepUntilWindowed(time, time + MS2ST(10)); //Prendre en compte le temps d'exec du controlleur

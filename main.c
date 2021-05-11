@@ -10,6 +10,7 @@
 #include <motors.h>
 #include <camera/po8030.h>
 #include <chprintf.h>
+#include "audio/play_sound_file.h"
 
 
 #include "main.h"
@@ -19,7 +20,6 @@
 messagebus_t bus;
 MUTEX_DECL(bus_lock);
 CONDVAR_DECL(bus_condvar);
-
 
 static uint8_t state = DIST_CAPTURE_STATE;
 
@@ -54,8 +54,11 @@ int main(void)
     //start the USB communication
     usb_start();
 
+    //start the sound playing module
+     playSoundFileStart();
+
     //initialise message bus
-    messagebus_init(&bus, &lock, &condvar);
+    //messagebus_init(&bus, &lock, &condvar);
 
     //starts the camera
     dcmi_start();
@@ -64,7 +67,8 @@ int main(void)
 	//inits the motors
 	motors_init();
 	//proximity sensor intialisation
-	proximity_start();
+	//proximity_start();
+
 
 
 	//stars the threads for the ToF sensor and the control of the motors
