@@ -18,8 +18,9 @@
 #define	DIAMETRE_EPUCK				54			//distance entre les deux roues du e-puck en mm
 #define SPEED_SATURATION_MOTOR		MOTOR_SPEED_LIMIT	//réduit la vitesse maximale des moteurs
 #define ERROR_SUM_MAX				500
-#define ERROR_SUM_PROX_MAX			200
+#define ERROR_SUM_PROX_MAX			100
 #define ERROR_MARGIN_DIST_MM		5				//mm
+#define ERROR_MARGIN_PROXIMITY		2
 #define TURN_SPEED					350			//vitesse à laquelle on fait touner le e-puck(en pas/s)
 #define NBR_STEP_90_DEGREE			PI*NUMBER_STEP_FULL_ROTATION*DIAMETRE_EPUCK/(4*PERIMETRE_ROUE)
 #define PROXIMITY_LEFT			5
@@ -30,7 +31,8 @@ static bool motor_stop = false;
 static uint8_t last_color = NO_COLOR; 			//dernière couleur vue par la camera (selon le #define de process_image.h)
 static uint8_t state = DIST_CAPTURE_STATE;
 static int16_t error_sum = 0;
-static int16_t error_sum_proximity = 0;			//Terme intégrale du PI utilisant les capteurs de proximité
+static int16_t error_sum_proximity = 0;			//Terme intégrale du PID utilisant les capteurs de proximité
+static int16_t previous_error = 0;				//dernière erreur pour le terme différentiel du PID
 
 
 
@@ -68,17 +70,17 @@ static THD_FUNCTION(MotorController, arg) {
     (void)arg;
 
     //adresse du fichier audio pour animation sonore
-    char sound[4] = "D:\"";
+    //char sound[4] = "D:\"";
 
 
     //calibration of the proximity sensors
-    //calibrate_ir();
-    setSoundFileVolume(VOLUME_MAX);
+    calibrate_ir();
+    //setSoundFileVolume(VOLUME_MAX);
 
     systime_t time;
 
     int16_t speed = 0;
-    //int16_t turn_speed = 0; //composante de la vitesse dédiée au recentrage du robot
+    int16_t turn_speed = 0; //composante de la vitesse dédiée au recentrage du robot
 
     while(1){
 
@@ -94,7 +96,7 @@ static THD_FUNCTION(MotorController, arg) {
         case TURN_STATE:
         	turn_90_degree();
         	set_state(DIST_CAPTURE_STATE);
-            playSoundFile(sound,SF_SIMPLE_PLAY);
+           //playSoundFile(sound,SF_SIMPLE_PLAY);
         	break;
         }
 
@@ -105,11 +107,11 @@ static THD_FUNCTION(MotorController, arg) {
                 		&& (get_distance_mm()>(TURN_TARGET_DIST_MM-ERROR_MARGIN_DIST_MM))) speed=0;
         else speed = regulator(get_distance_mm(), TURN_TARGET_DIST_MM);
 
-        //if(motor_stop) turn_speed = 0;
-        //else	       turn_speed = proximity_regulator();
+        if(motor_stop) turn_speed = 0;
+        else	       turn_speed = proximity_regulator();
 
-        left_motor_set_speed(speed);//-turn_speed);
-        right_motor_set_speed(speed);//+turn_speed);
+        left_motor_set_speed(speed+turn_speed);
+        right_motor_set_speed(speed-turn_speed);
 
         //100Hz
         chThdSleepUntilWindowed(time, time + MS2ST(10)); //Prendre en compte le temps d'exec du controlleur
@@ -193,8 +195,9 @@ int16_t proximity_regulator(void) {
 	int16_t turn_speed;
 	//implementing a PI regulator
 
-	int16_t Kp = 50;
-	float 	Ki = 0.1;
+	float Kp = 0.15;
+	float Ki = 0.05;
+	float Kd = 0.05;
 
 	//difference d'intensité entre les capteurs de droite et de gauche pour le centrage du robot en enlevant l'effet de la lunmière ambiante
 
@@ -206,7 +209,11 @@ int16_t proximity_regulator(void) {
 	if(error_sum_proximity > ERROR_SUM_PROX_MAX)	error_sum_proximity = ERROR_SUM_PROX_MAX;
 	if(error_sum_proximity < -ERROR_SUM_PROX_MAX)	error_sum_proximity = -ERROR_SUM_PROX_MAX;
 
-	turn_speed = Kp*prox_value_difference + Ki*error_sum_proximity;
+	if(prox_value_difference <ERROR_MARGIN_PROXIMITY && prox_value_difference > -ERROR_MARGIN_PROXIMITY	)  prox_value_difference = 0;
+
+	turn_speed = Kp*prox_value_difference + Ki*error_sum_proximity+Kd*(prox_value_difference-previous_error);
+
+	previous_error = prox_value_difference;
 
 	return turn_speed;
 }
