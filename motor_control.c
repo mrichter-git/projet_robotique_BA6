@@ -68,19 +68,12 @@ static THD_FUNCTION(MotorController, arg) {
     (void)arg;
 
     //adresse du fichier audio pour animation sonore
-    char sound[9];
-    sound[0] = 'r';
-    sound[1] = '2';
-    sound[3] = 'd';
-    sound[4] = '2';
-    sound[5] = '.';
-    sound[6] = 'w';
-    sound[7] = 'a';
-    sound[8] = 'v';
+    char sound[4] = "D:\"";
+
 
     //calibration of the proximity sensors
     //calibrate_ir();
-
+    setSoundFileVolume(VOLUME_MAX);
 
     systime_t time;
 
@@ -101,7 +94,7 @@ static THD_FUNCTION(MotorController, arg) {
         case TURN_STATE:
         	turn_90_degree();
         	set_state(DIST_CAPTURE_STATE);
-        	playSoundFile(sound,SF_SIMPLE_PLAY);
+            playSoundFile(sound,SF_SIMPLE_PLAY);
         	break;
         }
 

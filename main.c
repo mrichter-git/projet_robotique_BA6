@@ -11,11 +11,14 @@
 #include <camera/po8030.h>
 #include <chprintf.h>
 #include "audio/play_sound_file.h"
-
+#include "audio/play_melody.h"
+#include "audio/audio_thread.h"
+#include "sensors/proximity.h"
 
 #include "main.h"
 #include "motor_control.h"
 #include "ToF.h"
+#include "sdio.h"
 
 messagebus_t bus;
 MUTEX_DECL(bus_lock);
@@ -54,11 +57,18 @@ int main(void)
     //start the USB communication
     usb_start();
 
+    //starting sdio connection
+    //sdio_start();
+    //if(sdio_is_present()) sdio_connect();
+
+    //speakers
+    //dac_start();
+
     //start the sound playing module
-     playSoundFileStart();
+     //playSoundFileStart();
 
     //initialise message bus
-    //messagebus_init(&bus, &lock, &condvar);
+    messagebus_init(&bus, &bus_lock, &bus_condvar);
 
     //starts the camera
     dcmi_start();
@@ -67,13 +77,17 @@ int main(void)
 	//inits the motors
 	motors_init();
 	//proximity sensor intialisation
-	//proximity_start();
+	proximity_start();
 
 
 
 	//stars the threads for the ToF sensor and the control of the motors
 	ToF_start();
 	motor_controller_start();
+
+	//dac_power_speaker(true);
+
+
 
     /* Infinite loop. */
     while (1) {
