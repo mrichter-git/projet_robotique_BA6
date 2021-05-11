@@ -63,7 +63,7 @@ int16_t proximity_regulator(void);
 
 
 
-static THD_WORKING_AREA(waMotorController, 512);
+static THD_WORKING_AREA(waMotorController, 2048);
 static THD_FUNCTION(MotorController, arg) {
 
     chRegSetThreadName("Motor_Thd");
@@ -81,6 +81,8 @@ static THD_FUNCTION(MotorController, arg) {
 
     int16_t speed = 0;
     int16_t turn_speed = 0; //composante de la vitesse dédiée au recentrage du robot
+    //int16_t turn_speed = 0; //composante de la vitesse dédiée au recentrage du robot
+    bool captured = 0;
 
     while(1){
 
@@ -89,18 +91,26 @@ static THD_FUNCTION(MotorController, arg) {
 
        switch (state){
         case COLOR_CAPTURE_STATE:
-        	last_color = get_couleur();
-        	chprintf((BaseSequentialStream *)&SD3, "couleur = %d \n ", last_color);
+        	capture_couleur();
         	set_state(DIST_CAPTURE_STATE);
+        	captured = 1;
         	break;
         case TURN_STATE:
+        	//turn_90_degree();
+        	if (captured){
+        		last_color = get_couleur();
+        		chprintf((BaseSequentialStream *)&SD3, "couleur = %d \n ", last_color);
+        		reset_couleur();
+        		captured = 0;
+        	}
+
         	turn_90_degree();
         	set_state(DIST_CAPTURE_STATE);
            //playSoundFile(sound,SF_SIMPLE_PLAY);
         	break;
         }
 
-        //vitesse des moteurs
+        /*//vitesse des moteurs
         if(motor_stop)	speed = 0;
         //marge d'erreur acceptable
         else if ((get_distance_mm()<(TURN_TARGET_DIST_MM+ERROR_MARGIN_DIST_MM))
@@ -121,7 +131,7 @@ static THD_FUNCTION(MotorController, arg) {
 void motor_controller_start(void){
 	chThdCreateStatic(waMotorController,
 					sizeof(waMotorController),
-					NORMALPRIO+4,
+					NORMALPRIO,
 					MotorController, NULL);
 
 }
