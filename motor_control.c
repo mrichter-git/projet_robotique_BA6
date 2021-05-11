@@ -23,8 +23,8 @@
 #define ERROR_MARGIN_PROXIMITY		2
 #define TURN_SPEED					350			//vitesse à laquelle on fait touner le e-puck(en pas/s)
 #define NBR_STEP_90_DEGREE			PI*NUMBER_STEP_FULL_ROTATION*DIAMETRE_EPUCK/(4*PERIMETRE_ROUE)
-#define PROXIMITY_LEFT			5
-#define PROXIMITY_RIGHT			2
+#define PROXIMITY_LEFT				5
+#define PROXIMITY_RIGHT				2
 
 
 static bool motor_stop = false;
@@ -110,7 +110,7 @@ static THD_FUNCTION(MotorController, arg) {
         	break;
         }
 
-        /*//vitesse des moteurs
+        //vitesse des moteurs
         if(motor_stop)	speed = 0;
         //marge d'erreur acceptable
         else if ((get_distance_mm()<(TURN_TARGET_DIST_MM+ERROR_MARGIN_DIST_MM))
