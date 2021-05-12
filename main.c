@@ -14,7 +14,7 @@
 #include "audio/play_melody.h"
 #include "audio/audio_thread.h"
 #include "sensors/proximity.h"
-
+#include "process_image.h"
 #include "main.h"
 #include "motor_control.h"
 #include "ToF.h"
@@ -77,8 +77,9 @@ int main(void)
 	camera_init();
 	//inits the motors
 	motors_init();
-	//proximity sensor intialisation
+	//proximity sensor intialisation and calibrateion
 	proximity_start();
+	calibrate_ir();
 
 
 

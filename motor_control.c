@@ -20,7 +20,7 @@
 #define ERROR_SUM_MAX				500
 #define ERROR_SUM_PROX_MAX			100
 #define ERROR_MARGIN_DIST_MM		5				//mm
-#define ERROR_MARGIN_PROXIMITY		2
+#define ERROR_MARGIN_PROXIMITY		25
 #define TURN_SPEED					350			//vitesse à laquelle on fait touner le e-puck(en pas/s)
 #define NBR_STEP_90_DEGREE			PI*NUMBER_STEP_FULL_ROTATION*DIAMETRE_EPUCK/(4*PERIMETRE_ROUE)
 #define PROXIMITY_LEFT				5
@@ -72,16 +72,13 @@ static THD_FUNCTION(MotorController, arg) {
     //adresse du fichier audio pour animation sonore
     //char sound[4] = "D:\"";
 
-
-    //calibration of the proximity sensors
-    calibrate_ir();
     //setSoundFileVolume(VOLUME_MAX);
 
     systime_t time;
 
     int16_t speed = 0;
     int16_t turn_speed = 0; //composante de la vitesse dédiée au recentrage du robot
-    //int16_t turn_speed = 0; //composante de la vitesse dédiée au recentrage du robot
+
     bool captured = 0;
 
     while(1){
@@ -119,6 +116,9 @@ static THD_FUNCTION(MotorController, arg) {
 
         if(motor_stop) turn_speed = 0;
         else	       turn_speed = proximity_regulator();
+
+        speed = 0;
+        turn_speed = 0;
 
         left_motor_set_speed(speed+turn_speed);
         right_motor_set_speed(speed-turn_speed);
@@ -173,8 +173,8 @@ void turn_90_degree(void) {
 		left_motor_set_speed(-TURN_SPEED);
 
 		while(right_motor_get_pos()<=NBR_STEP_90_DEGREE && left_motor_get_pos() >=0) {
-			chprintf((BaseSequentialStream *)&SD3, "left motor = %d \n ", left_motor_get_pos());
-			chprintf((BaseSequentialStream *)&SD3, "right motor = %d \n ", right_motor_get_pos());
+			//chprintf((BaseSequentialStream *)&SD3, "left motor = %d \n ", left_motor_get_pos());
+			//chprintf((BaseSequentialStream *)&SD3, "right motor = %d \n ", right_motor_get_pos());
 		}
 		right_motor_set_speed(0);		//éteint les moteurs après avoir effectué le virage
 		left_motor_set_speed(0);
@@ -205,21 +205,30 @@ int16_t proximity_regulator(void) {
 	int16_t turn_speed;
 	//implementing a PI regulator
 
-	float Kp = 0.15;
+
+	float Kp = 0.2;
 	float Ki = 0.05;
-	float Kd = 0.05;
+	float Kd = 0.1;
 
 	//difference d'intensité entre les capteurs de droite et de gauche pour le centrage du robot en enlevant l'effet de la lunmière ambiante
 
-	int16_t prox_value_difference = (get_prox(PROXIMITY_LEFT)-get_ambient_light(PROXIMITY_LEFT)) - (get_prox(PROXIMITY_RIGHT)-get_ambient_light(PROXIMITY_RIGHT));
+	int16_t prox_value_difference = (get_prox(PROXIMITY_LEFT))-(get_prox(PROXIMITY_RIGHT));
 
 	error_sum_proximity+= prox_value_difference;
+
+	//+get_ambient_light(PROXIMITY_RIGHT)
+	//get_ambient_light(PROXIMITY_LEFT)
+	chprintf((BaseSequentialStream *)&SD3, "ir_left = %d \n ", get_prox(PROXIMITY_LEFT));
+	chprintf((BaseSequentialStream *)&SD3, "ir_right = %d \n ", get_prox(PROXIMITY_RIGHT));
+
 
 	//antireset windup implementation
 	if(error_sum_proximity > ERROR_SUM_PROX_MAX)	error_sum_proximity = ERROR_SUM_PROX_MAX;
 	if(error_sum_proximity < -ERROR_SUM_PROX_MAX)	error_sum_proximity = -ERROR_SUM_PROX_MAX;
 
+	//ne tient pas compte des variations dûes au bruit sur la mesure
 	if(prox_value_difference <ERROR_MARGIN_PROXIMITY && prox_value_difference > -ERROR_MARGIN_PROXIMITY	)  prox_value_difference = 0;
+	chprintf((BaseSequentialStream *)&SD3, "r-amb = %d \n", prox_value_difference);
 
 	turn_speed = Kp*prox_value_difference + Ki*error_sum_proximity+Kd*(prox_value_difference-previous_error);
 
