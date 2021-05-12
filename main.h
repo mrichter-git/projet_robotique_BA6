@@ -15,7 +15,8 @@ extern "C" {
 
 #define DIST_CAPTURE_STATE		0			//mode de capture de distance: vérifier dans quel mode on se trouve
 #define COLOR_CAPTURE_STATE		1			//mode de capture de couleur: appel des fonctions de capture d'image
-#define TURN_STATE				2			//mode de virage: on appelle les fonctions de virage
+#define COLOR_GOT_STATE			2			//mode de transmission de couleur: on enregistre la couleur
+#define TURNING_STATE			3			//mode de virage: on appelle les fonctions de virage
 
 /** Robot wide IPC bus. */
 extern messagebus_t bus;

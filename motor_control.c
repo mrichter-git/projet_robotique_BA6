@@ -16,14 +16,14 @@
 #define PI							3.1416
 #define PERIMETRE_ROUE				130			//perimetre de la roue en mm
 #define	DIAMETRE_EPUCK				54			//distance entre les deux roues du e-puck en mm
-#define SPEED_SATURATION_MOTOR		MOTOR_SPEED_LIMIT	//réduit la vitesse maximale des moteurs
+#define SPEED_SATURATION_MOTOR		MOTOR_SPEED_LIMIT*0.5	//réduit la vitesse maximale des moteurs
 #define ERROR_SUM_MAX				500
 #define ERROR_SUM_PROX_MAX			200
 #define ERROR_MARGIN_DIST_MM		5				//mm
 #define TURN_SPEED					350			//vitesse à laquelle on fait touner le e-puck(en pas/s)
 #define NBR_STEP_90_DEGREE			PI*NUMBER_STEP_FULL_ROTATION*DIAMETRE_EPUCK/(4*PERIMETRE_ROUE)
-#define PROXIMITY_LEFT			5
-#define PROXIMITY_RIGHT			2
+#define PROXIMITY_LEFT				5
+#define PROXIMITY_RIGHT				2
 
 
 static bool motor_stop = false;
@@ -78,7 +78,7 @@ static THD_FUNCTION(MotorController, arg) {
     systime_t time;
 
     int16_t speed = 0;
-    //int16_t turn_speed = 0; //composante de la vitesse dédiée au recentrage du robot
+    int16_t turn_speed = 0; //composante de la vitesse dédiée au recentrage du robot
     bool captured = 0;
 
     while(1){
@@ -92,22 +92,24 @@ static THD_FUNCTION(MotorController, arg) {
         	set_state(DIST_CAPTURE_STATE);
         	captured = 1;
         	break;
-        case TURN_STATE:
-        	//turn_90_degree();
+        case COLOR_GOT_STATE:
         	if (captured){
         		last_color = get_couleur();
         		chprintf((BaseSequentialStream *)&SD3, "couleur = %d \n ", last_color);
         		reset_couleur();
         		captured = 0;
         	}
-
+        	//turn_90_degree();
+            //playSoundFile(sound,SF_SIMPLE_PLAY);
+            set_state(TURNING_STATE);
+        	break;
+        case TURNING_STATE:
         	turn_90_degree();
         	set_state(DIST_CAPTURE_STATE);
-            playSoundFile(sound,SF_SIMPLE_PLAY);
         	break;
         }
 
-        /*//vitesse des moteurs
+        //vitesse des moteurs
         if(motor_stop)	speed = 0;
         //marge d'erreur acceptable
         else if ((get_distance_mm()<(TURN_TARGET_DIST_MM+ERROR_MARGIN_DIST_MM))
@@ -159,9 +161,6 @@ int16_t regulator(uint16_t distance, uint16_t command) {
 
 void turn_90_degree(void) {
 
-	last_color=NO_COLOR;
-
-
 	//virage à gauche
 	if(last_color == ROUGE) {
 		right_motor_set_pos(0);
@@ -170,8 +169,8 @@ void turn_90_degree(void) {
 		left_motor_set_speed(-TURN_SPEED);
 
 		while(right_motor_get_pos()<=NBR_STEP_90_DEGREE && left_motor_get_pos() >=0) {
-			chprintf((BaseSequentialStream *)&SD3, "left motor = %d \n ", left_motor_get_pos());
-			chprintf((BaseSequentialStream *)&SD3, "right motor = %d \n ", right_motor_get_pos());
+			//chprintf((BaseSequentialStream *)&SD3, "left motor = %d \n ", left_motor_get_pos());
+			//chprintf((BaseSequentialStream *)&SD3, "right motor = %d \n ", right_motor_get_pos());
 		}
 		right_motor_set_speed(0);		//éteint les moteurs après avoir effectué le virage
 		left_motor_set_speed(0);
