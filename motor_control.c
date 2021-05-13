@@ -101,18 +101,20 @@ static THD_FUNCTION(MotorController, arg) {
         	set_state(DIST_CAPTURE_STATE);
         	captured = 1;
         	break;
-        case TURN_STATE:
-        	//turn_90_degree();
+        case COLOR_GOT_STATE:
         	if (captured){
         		last_color = get_couleur();
         		chprintf((BaseSequentialStream *)&SD3, "couleur = %d \n ", last_color);
         		reset_couleur();
         		captured = 0;
         	}
-
+        	//turn_90_degree();
+            //playSoundFile(sound,SF_SIMPLE_PLAY);
+            set_state(TURNING_STATE);
+        	break;
+        case TURNING_STATE:
         	turn_90_degree();
         	set_state(DIST_CAPTURE_STATE);
-           //playSoundFile(sound,SF_SIMPLE_PLAY);
         	break;
         }
 
@@ -170,9 +172,6 @@ int16_t regulator(uint16_t distance, uint16_t command) {
 
 
 void turn_90_degree(void) {
-
-	//last_color=ROUGE;
-
 
 	//virage à gauche
 	if(last_color == ROUGE) {

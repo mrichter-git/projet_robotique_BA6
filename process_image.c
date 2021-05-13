@@ -12,9 +12,9 @@
 #define MAX_VALUE_GREEN		63
 #define MAX_VALUE_BLUE	 	31
 #define SLOPE_WIDTH			30
-#define RED_GAIN			0x5E		//default 0x5E
-#define GREEN_GAIN			0x49		//default 0x40
-#define BLUE_GAIN			0x5D		//default 0x5D
+#define RED_GAIN			0x60		//default 0x5E
+#define GREEN_GAIN			0x50		//default 0x40
+#define BLUE_GAIN			0x46		//default 0x5D
 
 
 //--------------------------------------------------------------------------------------------------------------

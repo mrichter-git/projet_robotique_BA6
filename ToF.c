@@ -80,7 +80,7 @@ static THD_FUNCTION(ToFThd, arg) {
    				set_state(COLOR_CAPTURE_STATE);
    	   		}
    	   		else if (ToF_turn_target_hit()){
-   	   			set_state(TURN_STATE);
+   	   			set_state(COLOR_GOT_STATE);
    	   		}
     	}
     	//chprintf((BaseSequentialStream *)&SD3, "state = %d \n ", get_state());
