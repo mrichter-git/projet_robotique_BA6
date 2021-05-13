@@ -70,16 +70,16 @@ static THD_FUNCTION(ToFThd, arg) {
 
     /* Loop de lecture du thread*/
     while (chThdShouldTerminateX() == false) {
-    	if(ToF_configured && get_state()==DIST_CAPTURE_STATE){
+    	if(ToF_configured){
     		//on copie la valeur mesurée dans une variable facile d'accès
     		VL53L0X_getLastMeasure(&device);
    			dist_mm = device.Data.LastRangeMeasure.RangeMilliMeter;
 
    			//détection d'état du système
-   			if (ToF_color_target_hit()){	//si la distance voulue est atteinte, on change de mode
+   			if (ToF_color_target_hit() && get_state()==DIST_CAPTURE_STATE){	//si la distance voulue est atteinte, on change de mode
    				set_state(COLOR_CAPTURE_STATE);
    	   		}
-   	   		else if (ToF_turn_target_hit()){
+   	   		else if (ToF_turn_target_hit() && get_state()==COLOR_CAPTURE_STATE){
    	   			set_state(COLOR_GOT_STATE);
    	   		}
     	}

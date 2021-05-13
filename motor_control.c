@@ -42,6 +42,7 @@ static int16_t error_sum_proximity_3 = 0;
 static int16_t previous_error_1 = 0;				//dernière erreur pour le terme différentiel du PID
 static int16_t previous_error_2 = 0;
 static int16_t previous_error_3 = 0;
+static uint16_t max_speed = SPEED_SATURATION_MOTOR;
 
 
 
@@ -89,6 +90,7 @@ static THD_FUNCTION(MotorController, arg) {
     int16_t turn_speed = 0; //composante de la vitesse dédiée au recentrage du robot
 
     bool captured = 0;
+    bool prox_active = 1;
 
     while(1){
 
@@ -96,15 +98,20 @@ static THD_FUNCTION(MotorController, arg) {
         state = get_state();
 
        switch (state){
+        case DIST_CAPTURE_STATE:
+        	max_speed = SPEED_SATURATION_MOTOR;
+        	break;
         case COLOR_CAPTURE_STATE:
         	capture_couleur();
-        	set_state(DIST_CAPTURE_STATE);
+        	max_speed = SPEED_SATURATION_MOTOR*0.28;
+        	prox_active = 0;
         	captured = 1;
         	break;
         case COLOR_GOT_STATE:
         	if (captured){
         		last_color = get_couleur();
         		chprintf((BaseSequentialStream *)&SD3, "couleur = %d \n ", last_color);
+        		prox_active = 1;
         		reset_couleur();
         		captured = 0;
         	}
@@ -125,7 +132,7 @@ static THD_FUNCTION(MotorController, arg) {
                 		&& (get_distance_mm()>(TURN_TARGET_DIST_MM-ERROR_MARGIN_DIST_MM))) speed=0;
         else speed = regulator(get_distance_mm(), TURN_TARGET_DIST_MM);
 
-        if(motor_stop) turn_speed = 0;
+        if(motor_stop || !prox_active) turn_speed = 0;
         else	       turn_speed = proximity_regulator();
 
         //speed = 0;
@@ -154,7 +161,7 @@ void motor_controller_start(void){
 int16_t regulator(uint16_t distance, uint16_t command) {
 
 	int16_t speed = 0;
-	int16_t Kp = 50;
+	int16_t Kp = 35;
 	float Ki = 0.29;
 	error_sum += distance-command;
 	speed = Kp*(distance-command) + Ki*error_sum;
@@ -163,8 +170,8 @@ int16_t regulator(uint16_t distance, uint16_t command) {
 	if (error_sum > ERROR_SUM_MAX ) error_sum = ERROR_SUM_MAX;
 	else if (error_sum < -ERROR_SUM_MAX) error_sum = -ERROR_SUM_MAX;
 
-	if(speed > SPEED_SATURATION_MOTOR)   speed = SPEED_SATURATION_MOTOR;
-    if(speed < -SPEED_SATURATION_MOTOR)  speed = -SPEED_SATURATION_MOTOR;
+	if(speed > max_speed)   speed = max_speed;
+    if(speed < -max_speed)  speed = -max_speed;
 
 	return speed;
 
