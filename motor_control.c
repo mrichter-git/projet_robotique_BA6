@@ -16,23 +16,32 @@
 #define PI							3.1416
 #define PERIMETRE_ROUE				130			//perimetre de la roue en mm
 #define	DIAMETRE_EPUCK				54			//distance entre les deux roues du e-puck en mm
-#define SPEED_SATURATION_MOTOR		MOTOR_SPEED_LIMIT	//réduit la vitesse maximale des moteurs
+#define SPEED_SATURATION_MOTOR		MOTOR_SPEED_LIMIT*3/4	//réduit la vitesse maximale des moteurs
 #define ERROR_SUM_MAX				500
 #define ERROR_SUM_PROX_MAX			100
 #define ERROR_MARGIN_DIST_MM		5				//mm
-#define ERROR_MARGIN_PROXIMITY		25
+#define ERROR_MARGIN_PROXIMITY		15
 #define TURN_SPEED					350			//vitesse à laquelle on fait touner le e-puck(en pas/s)
 #define NBR_STEP_90_DEGREE			PI*NUMBER_STEP_FULL_ROTATION*DIAMETRE_EPUCK/(4*PERIMETRE_ROUE)
 #define PROXIMITY_LEFT				5
 #define PROXIMITY_RIGHT				2
+#define PROXIMITY_AVANT_DROITE		1
+#define PROXIMITY_AVANT_GAUCHE		6
+#define PROXIMITY_BACK_DROITE		3
+#define PROXIMITY_BACK_GAUCHE		4
+
 
 
 static bool motor_stop = false;
 static uint8_t last_color = NO_COLOR; 			//dernière couleur vue par la camera (selon le #define de process_image.h)
 static uint8_t state = DIST_CAPTURE_STATE;
 static int16_t error_sum = 0;
-static int16_t error_sum_proximity = 0;			//Terme intégrale du PID utilisant les capteurs de proximité
-static int16_t previous_error = 0;				//dernière erreur pour le terme différentiel du PID
+static int16_t error_sum_proximity_1 = 0;	//Terme intégrale du PID utilisant les capteurs de proximité
+static int16_t error_sum_proximity_2 = 0;
+static int16_t error_sum_proximity_3 = 0;
+static int16_t previous_error_1 = 0;				//dernière erreur pour le terme différentiel du PID
+static int16_t previous_error_2 = 0;
+static int16_t previous_error_3 = 0;
 
 
 
@@ -117,8 +126,8 @@ static THD_FUNCTION(MotorController, arg) {
         if(motor_stop) turn_speed = 0;
         else	       turn_speed = proximity_regulator();
 
-        speed = 0;
-        turn_speed = 0;
+        //speed = 0;
+        //turn_speed = 0;
 
         left_motor_set_speed(speed+turn_speed);
         right_motor_set_speed(speed-turn_speed);
@@ -162,7 +171,7 @@ int16_t regulator(uint16_t distance, uint16_t command) {
 
 void turn_90_degree(void) {
 
-	last_color=NO_COLOR;
+	//last_color=ROUGE;
 
 
 	//virage à gauche
@@ -202,19 +211,33 @@ void turn_90_degree(void) {
 
 int16_t proximity_regulator(void) {
 
-	int16_t turn_speed;
+	int16_t turn_speed_1 = 0; 	//l'indice 1 se réfère aux termes du régulateur associés aux capteurs droite et gauche
+	int16_t turn_speed_2 = 0;	//l'indice 2 se réfère aux termes du régulateur associés aux capteurs avant-droite et avant-gauche
+	int16_t turn_speed_3 = 0;	//l'indice 3 se réfère aux termes du régulateur associés aux capteurs arrière-droite et arrière-gauche
 	//implementing a PI regulator
 
 
-	float Kp = 0.2;
-	float Ki = 0.05;
-	float Kd = 0.1;
+	float Kp_1 = 0.1;
+	float Ki_1 = 0.05;
+	float Kd_1 = 0.07;
+
+	float Kp_2 = 0.7;
+	float Ki_2 = 0.03;
+	float Kd_2 = 0.04;
+
+	float Kp_3 = 0.6;
+	float Ki_3 = 0.07;
+	float Kd_3 = 0.03;
 
 	//difference d'intensité entre les capteurs de droite et de gauche pour le centrage du robot en enlevant l'effet de la lunmière ambiante
 
-	int16_t prox_value_difference = (get_prox(PROXIMITY_LEFT))-(get_prox(PROXIMITY_RIGHT));
+	int16_t prox_value_difference_1 = (get_prox(PROXIMITY_LEFT))-(get_prox(PROXIMITY_RIGHT));
+	int16_t prox_value_difference_2 = (get_prox(PROXIMITY_AVANT_GAUCHE))-(get_prox(PROXIMITY_AVANT_DROITE));
+	int16_t prox_value_difference_3 = (get_prox(PROXIMITY_BACK_GAUCHE))-(get_prox(PROXIMITY_BACK_DROITE));
 
-	error_sum_proximity+= prox_value_difference;
+	error_sum_proximity_1+= prox_value_difference_1; //termes intégraux du régulateur
+	error_sum_proximity_2+= prox_value_difference_2;
+	error_sum_proximity_3+= prox_value_difference_3;
 
 	//+get_ambient_light(PROXIMITY_RIGHT)
 	//get_ambient_light(PROXIMITY_LEFT)
@@ -223,18 +246,30 @@ int16_t proximity_regulator(void) {
 
 
 	//antireset windup implementation
-	if(error_sum_proximity > ERROR_SUM_PROX_MAX)	error_sum_proximity = ERROR_SUM_PROX_MAX;
-	if(error_sum_proximity < -ERROR_SUM_PROX_MAX)	error_sum_proximity = -ERROR_SUM_PROX_MAX;
+	if(error_sum_proximity_1 > ERROR_SUM_PROX_MAX)	error_sum_proximity_1 = ERROR_SUM_PROX_MAX;
+	if(error_sum_proximity_1 < -ERROR_SUM_PROX_MAX)	error_sum_proximity_1 = -ERROR_SUM_PROX_MAX;
+	if(error_sum_proximity_2 > ERROR_SUM_PROX_MAX)	error_sum_proximity_2 = ERROR_SUM_PROX_MAX;
+	if(error_sum_proximity_2 < -ERROR_SUM_PROX_MAX)	error_sum_proximity_2 = -ERROR_SUM_PROX_MAX;
+	if(error_sum_proximity_3 > ERROR_SUM_PROX_MAX)	error_sum_proximity_3 = ERROR_SUM_PROX_MAX;
+	if(error_sum_proximity_3 < -ERROR_SUM_PROX_MAX)	error_sum_proximity_3 = -ERROR_SUM_PROX_MAX;
 
 	//ne tient pas compte des variations dûes au bruit sur la mesure
-	if(prox_value_difference <ERROR_MARGIN_PROXIMITY && prox_value_difference > -ERROR_MARGIN_PROXIMITY	)  prox_value_difference = 0;
-	chprintf((BaseSequentialStream *)&SD3, "r-amb = %d \n", prox_value_difference);
+	if(prox_value_difference_1 <ERROR_MARGIN_PROXIMITY && prox_value_difference_1 > -ERROR_MARGIN_PROXIMITY	)  prox_value_difference_1 = 0;
+	if(prox_value_difference_2 <ERROR_MARGIN_PROXIMITY && prox_value_difference_2 > -ERROR_MARGIN_PROXIMITY	)  prox_value_difference_2 = 0;
+	if(prox_value_difference_3 <ERROR_MARGIN_PROXIMITY && prox_value_difference_3 > -ERROR_MARGIN_PROXIMITY	)  prox_value_difference_3 = 0;
 
-	turn_speed = Kp*prox_value_difference + Ki*error_sum_proximity+Kd*(prox_value_difference-previous_error);
 
-	previous_error = prox_value_difference;
 
-	return turn_speed;
+	turn_speed_1 = Kp_1*prox_value_difference_1 + Ki_1*error_sum_proximity_1 +Kd_1*(prox_value_difference_1-previous_error_1);
+	turn_speed_2 = Kp_2*prox_value_difference_2 + Ki_2*error_sum_proximity_2+Kd_2*(prox_value_difference_2-previous_error_2);
+	turn_speed_3 = Kp_3*prox_value_difference_3 + Ki_3*error_sum_proximity_3+Kd_3*(prox_value_difference_2-previous_error_2);
+
+
+	previous_error_1 = prox_value_difference_1;
+	previous_error_2 = prox_value_difference_2;
+	previous_error_3 = prox_value_difference_3;
+
+	return turn_speed_1+turn_speed_2+turn_speed_3;
 }
 
 
