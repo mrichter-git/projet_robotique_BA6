@@ -1,8 +1,13 @@
 #ifndef PROCESS_IMAGE_H
 #define PROCESS_IMAGE_H
 
+#define NO_COLOR	0
+#define ROUGE		1
+#define VERT		2
+#define	BLEU		3
+
 /* fonction:  renvoie la couleur moyenne trouvée
- * arguments: aucuns
+ * arguments: aucun
  * return:    uint8_t: couleur 0 = aucunce couleur dominante, 1 = rouge, 2 = vert, 3 = bleu
  */
 uint8_t get_couleur(void);
@@ -24,11 +29,5 @@ void capture_couleur(void);
  * return:    aucun
  */
 void camera_init(void);
-
-#define NO_COLOR	0
-#define ROUGE		1
-#define VERT		2
-#define	BLEU		3
-
 
 #endif /* PROCESS_IMAGE_H */

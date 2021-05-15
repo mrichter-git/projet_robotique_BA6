@@ -20,9 +20,11 @@
 #include "ToF.h"
 #include "sdio.h"
 
+//declaration du messagebus utilisé par les capteurs de proximité
 messagebus_t bus;
 MUTEX_DECL(bus_lock);
 CONDVAR_DECL(bus_condvar);
+
 
 static uint8_t state = DIST_CAPTURE_STATE;
 
@@ -57,27 +59,18 @@ int main(void)
     //start the USB communication
     usb_start();
 
-    //starting sdio connection
-    //sdio_start();
-    //if(sdio_is_present()) sdio_connect();
-
-    //speakers
-    //dac_start();
-
-    //start the sound playing module
-     //playSoundFileStart();
-
     //initialise message bus
     messagebus_init(&bus, &bus_lock, &bus_condvar);
 
     //starts the camera
     dcmi_start();
 	po8030_start();
-
 	camera_init();
+
 	//inits the motors
 	motors_init();
-	//proximity sensor intialisation and calibrateion
+
+	//proximity sensor intialisation and calibration
 	proximity_start();
 	calibrate_ir();
 
@@ -86,10 +79,6 @@ int main(void)
 	//stars the threads for the ToF sensor and the control of the motors
 	ToF_start();
 	motor_controller_start();
-
-	//dac_power_speaker(true);
-
-
 
     /* Infinite loop. */
     while (1) {

@@ -22,7 +22,7 @@
 //*Déclaration des variables globales internes et déclaration des fonctions privées
 //--------------------------------------------------------------------------------------------------------------
 
-static uint16_t dist_mm = 0;
+static uint16_t dist_mm = 0;		//distance mesurée par le TOF
 static bool ToF_configured = false;
 static thread_t *distThd;
 
@@ -83,8 +83,7 @@ static THD_FUNCTION(ToFThd, arg) {
    	   			set_state(COLOR_GOT_STATE);
    	   		}
     	}
-    	//chprintf((BaseSequentialStream *)&SD3, "state = %d \n ", get_state());
-    	//chprintf((BaseSequentialStream *)&SD3, "dist = %d \n ", dist_mm);
+
 		chThdSleepMilliseconds(100);
     }
 }

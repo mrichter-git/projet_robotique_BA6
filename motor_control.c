@@ -65,7 +65,7 @@ int16_t regulator(uint16_t distance, uint16_t command);
 void turn_90_degree(void);
 
 
-/* fonction: recentrage du robot au milieu de sa piste au moyen d'un regulateur PI
+/* fonction: recentrage du robot au milieu de sa piste au moyen d'un regulateur PID grâce aux capteurs de proximité
  * arguments: aucun
  * return: 	commande en vitesse pour les moteurs.
  */
@@ -78,11 +78,6 @@ static THD_FUNCTION(MotorController, arg) {
 
     chRegSetThreadName("Motor_Thd");
     (void)arg;
-
-    //adresse du fichier audio pour animation sonore
-    //char sound[4] = "D:\"";
-
-    //setSoundFileVolume(VOLUME_MAX);
 
     systime_t time;
 
@@ -97,6 +92,7 @@ static THD_FUNCTION(MotorController, arg) {
         time = chVTGetSystemTime();
         state = get_state();
 
+       //choix des opérations à faire en fonction de l'état du robot (ex:tourner, prise d'image, etc...)
        switch (state){
         case DIST_CAPTURE_STATE:
         	max_speed = SPEED_SATURATION_MOTOR;
@@ -115,8 +111,7 @@ static THD_FUNCTION(MotorController, arg) {
         		reset_couleur();
         		captured = 0;
         	}
-        	//turn_90_degree();
-            //playSoundFile(sound,SF_SIMPLE_PLAY);
+
             set_state(TURNING_STATE);
         	break;
         case TURNING_STATE:
@@ -124,6 +119,7 @@ static THD_FUNCTION(MotorController, arg) {
         	set_state(DIST_CAPTURE_STATE);
         	break;
         }
+
 
         //vitesse des moteurs
         if(motor_stop)	speed = 0;
@@ -135,8 +131,6 @@ static THD_FUNCTION(MotorController, arg) {
         if(motor_stop || !prox_active) turn_speed = 0;
         else	       turn_speed = proximity_regulator();
 
-        //speed = 0;
-        //turn_speed = 0;
 
         left_motor_set_speed(speed+turn_speed);
         right_motor_set_speed(speed-turn_speed);
@@ -188,8 +182,7 @@ void turn_90_degree(void) {
 		left_motor_set_speed(-TURN_SPEED);
 
 		while(right_motor_get_pos()<=NBR_STEP_90_DEGREE && left_motor_get_pos() >=0) {
-			//chprintf((BaseSequentialStream *)&SD3, "left motor = %d \n ", left_motor_get_pos());
-			//chprintf((BaseSequentialStream *)&SD3, "right motor = %d \n ", right_motor_get_pos());
+			__asm__ volatile("nop");
 		}
 		right_motor_set_speed(0);		//éteint les moteurs après avoir effectué le virage
 		left_motor_set_speed(0);
@@ -201,6 +194,7 @@ void turn_90_degree(void) {
 		left_motor_set_pos(0);
 		right_motor_set_speed(-TURN_SPEED);
 		left_motor_set_speed(TURN_SPEED);
+
 		while(right_motor_get_pos()>=0 && left_motor_get_pos()<= NBR_STEP_90_DEGREE) {
 			__asm__ volatile("nop");
 		}
@@ -220,8 +214,8 @@ int16_t proximity_regulator(void) {
 	int16_t turn_speed_1 = 0; 	//l'indice 1 se réfère aux termes du régulateur associés aux capteurs droite et gauche
 	int16_t turn_speed_2 = 0;	//l'indice 2 se réfère aux termes du régulateur associés aux capteurs avant-droite et avant-gauche
 	int16_t turn_speed_3 = 0;	//l'indice 3 se réfère aux termes du régulateur associés aux capteurs arrière-droite et arrière-gauche
-	//implementing a PI regulator
 
+	//implementing a PI regulator
 
 	float Kp_1 = 0.1;
 	float Ki_1 = 0.05;
@@ -235,7 +229,7 @@ int16_t proximity_regulator(void) {
 	float Ki_3 = 0.07;
 	float Kd_3 = 0.03;
 
-	//difference d'intensité entre les capteurs de droite et de gauche pour le centrage du robot en enlevant l'effet de la lunmière ambiante
+	//difference d'intensité entre les capteurs de droite et de gauche pour le centrage du robot
 
 	int16_t prox_value_difference_1 = (get_prox(PROXIMITY_LEFT))-(get_prox(PROXIMITY_RIGHT));
 	int16_t prox_value_difference_2 = (get_prox(PROXIMITY_AVANT_GAUCHE))-(get_prox(PROXIMITY_AVANT_DROITE));
@@ -244,12 +238,6 @@ int16_t proximity_regulator(void) {
 	error_sum_proximity_1+= prox_value_difference_1; //termes intégraux du régulateur
 	error_sum_proximity_2+= prox_value_difference_2;
 	error_sum_proximity_3+= prox_value_difference_3;
-
-	//+get_ambient_light(PROXIMITY_RIGHT)
-	//get_ambient_light(PROXIMITY_LEFT)
-	chprintf((BaseSequentialStream *)&SD3, "ir_left = %d \n ", get_prox(PROXIMITY_LEFT));
-	chprintf((BaseSequentialStream *)&SD3, "ir_right = %d \n ", get_prox(PROXIMITY_RIGHT));
-
 
 	//antireset windup implementation
 	if(error_sum_proximity_1 > ERROR_SUM_PROX_MAX)	error_sum_proximity_1 = ERROR_SUM_PROX_MAX;
@@ -264,8 +252,7 @@ int16_t proximity_regulator(void) {
 	if(prox_value_difference_2 <ERROR_MARGIN_PROXIMITY && prox_value_difference_2 > -ERROR_MARGIN_PROXIMITY	)  prox_value_difference_2 = 0;
 	if(prox_value_difference_3 <ERROR_MARGIN_PROXIMITY && prox_value_difference_3 > -ERROR_MARGIN_PROXIMITY	)  prox_value_difference_3 = 0;
 
-
-
+	//calcul de la commande
 	turn_speed_1 = Kp_1*prox_value_difference_1 + Ki_1*error_sum_proximity_1 +Kd_1*(prox_value_difference_1-previous_error_1);
 	turn_speed_2 = Kp_2*prox_value_difference_2 + Ki_2*error_sum_proximity_2+Kd_2*(prox_value_difference_2-previous_error_2);
 	turn_speed_3 = Kp_3*prox_value_difference_3 + Ki_3*error_sum_proximity_3+Kd_3*(prox_value_difference_2-previous_error_2);
